@@ -1,0 +1,35 @@
+about the data:
+62314 servers
+of which 62085 were visited
+
+postgres:
+http://www.postgresql.org/docs/9.3/static/functions-window.html
+http://www.postgresql.org/docs/9.1/static/sql-altertable.html
+
+
+r:
+http://brooksandrew.github.io/simpleblog/articles/advanced-data-table/#accessing-elements-from-a-column-of-lists
+https://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html
+http://stackoverflow.com/questions/21435339/data-table-vs-dplyr-can-one-do-something-well-the-other-cant-or-does-poorly
+
+data.table
+https://rpubs.com/davoodastaraky/dataTable
+http://gormanalysis.com/r-data-table-rolling-joins/
+
+python:
+https://docs.python.org/3/reference/import.html
+https://google.github.io/styleguide/pyguide.html
+
+
+vim:
+https://github.com/xolox/vim-session
+https://github.com/zefei/vim-wintabs/blob/master/doc/wintabs.txt
+
+
+workflow:
+http://swcarpentry.github.io/2014-03-17-ucb/lessons/jk-python/reproducible_workflow.html
+https://barryrowlingson.github.io/hadleyverse/#1
+http://r-pkgs.had.co.nz/tests.html
+
+SO:
+http://stackoverflow.com/questions/36040542/lagged-lists-in-data-table-r/36041367#36041367

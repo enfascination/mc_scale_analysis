@@ -1,0 +1,36 @@
+
+
+manageworld
+
+semi-vanilla
+worldedit
+essentials
+essentialsprotect
+worldgaurd
+
+
+managepopulation
+
+whitelist
+usa 
+18+
+uk
+16+
+mature
+towny
+
+
+
+rbasic involves basic aspects of server configuration
+rbiophys describes changes to the laws of physics in the game 
+rpop describes changes to the composition of the group 
+rprevent descries things that prevent vandalism, and enforce rules automaticaly and make it easier to  enforce rules
+exeternal describes norms and systems and structures from outside the game that are brought into the game unchanged
+rheretero describes a change in the heterogeneity fo teh population
+incentive describes a direct change to paleyrs incentives in teh gaems
+rinst describes the addition of a selfcontained in-game institution for managing resource distribution. it can be negatie in servers that emphaize their lack of usch institutions
+rech describes addition of an outside technology to game play for all players
+spat describes a change in the spatial distribution of players or their spatial relationship to resources
+soccap provides players opportunity to build social capital/community
+leader technolgoy that further mepoers those in leadership role
+infopred toosl that add tot he information about and predictability of the world

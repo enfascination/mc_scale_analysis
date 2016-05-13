@@ -1,0 +1,53 @@
+,pred,feat,furl,cursecat,beta,i_srvmax,nobs,friv,inst_type,inst_selection,boundary,action_other_up,action_other_down,action_admin,role_rank,role_type,economy,communication,rbasic,rbiophys,popvol,popforce,rprevent,rexternal,rhetero,rincntv,rinst,rtech,rspat,rsoccap,rleader,rinfopred,rnorms
+1,srv_max,srv_max,,,0.312731943215247,FALSE,633.761808991189,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+2,coreprotect,coreprotect,http://mods.curse.com/bukkit-plugins/minecraft/coreprotect,,0.983938423188738,FALSE,29,FALSE,No discretion,Automatic,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,1,0
+3,essentials,essentials,,,-0.0440484868989347,FALSE,220,FALSE,No discretion,Automatic,0,1,0,1,1,0,1,0,0,0,0,0,1,0,0,1,1,0,1,1,1,1,0
+4,worldedit,worldedit,,,-0.047551595829335,FALSE,499,FALSE,No discretion,N/A,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0
+5,worldguard,worldguard,,,-0.02450199761076,FALSE,271,FALSE,No discretion,Automatic,0,0,1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0
+6,zavautomessager,zavautomessager,http://dev.bukkit.org/bukkit-plugins/zavautomessager/,,-0.0724496127376421,FALSE,25,FALSE,Strategy,NA,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0
+7,srvmax_bossbarapi,bossbarapi,http://mods.curse.com/bukkit-plugins/minecraft/bossbarapi,,10.7646012177232,TRUE,1,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+8,srvmax_bukkitcompat,bukkitcompat,,,0.0652328640285045,TRUE,39,FALSE,N/A,N/A,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+9,srvmax_buycraft,buycraft,,,0.315877883571787,TRUE,8,FALSE,Strategy,NA,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0
+10,srvmax_chairs,chairs,,,0.111319297468223,TRUE,68,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+11,srvmax_chatguard,chatguard,http://mods.curse.com/bukkit-plugins/minecraft/chat-guard,,-0.491190365607242,TRUE,6,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+12,srvmax_chestshop,chestshop,,,-0.242445919472538,TRUE,45,FALSE,N/A,N/A,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0
+13,srvmax_clearlag,clearlag,,,-0.120048166674265,TRUE,33,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+14,srvmax_coreprotect,coreprotect,,,0.0289039994137286,TRUE,29,FALSE,No discretion,Automatic,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,1,1,0
+15,srvmax_craftbook,craftbook,,,-0.189331672439644,TRUE,38,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+16,srvmax_enjinminecraftplugin,enjinminecraftplugin,,,0.761109930738238,TRUE,9,FALSE,N/A,N/A,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0
+17,srvmax_epicspleef,epicspleef,,,0.0677592267441423,TRUE,3,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+18,srvmax_funnyguilds,funnyguilds,,,4.21431435051359,TRUE,1,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+19,srvmax_griefprevention,griefprevention,,,0.937137098892567,TRUE,18,FALSE,No discretion,Automatic,0,0,1,0,0,0,0,0,0,1,0,1,1,0,0,1,1,0,1,0,1,1,0
+20,srvmax_hidestream,hidestream,,,0.0305799348740788,TRUE,9,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+21,srvmax_holographicdisplays,holographicdisplays,,,-0.265957914815523,TRUE,17,TRUE,N/A,N/A,0,0,0,0,0,0,0,1,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+22,srvmax_horsekeep,horsekeep,,,0.675518359297849,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+23,srvmax_iconomy,iconomy,,,-0.243146700568497,TRUE,62,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0
+24,srvmax_libsdisguises,libsdisguises,,,0.333381196985732,TRUE,4,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+25,srvmax_logblock,logblock,,,0.263448086607862,TRUE,33,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,1,0,0,0,0,0,0,0,1,2,0
+26,srvmax_logit,logit,,,4.21431435051359,TRUE,1,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+27,srvmax_lwc,lwc,,,-0.192444321781486,TRUE,133,FALSE,No discretion,Automatic,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,0,0,1,0,0
+28,srvmax_maxbans,maxbans,,,1.20519202596175,TRUE,6,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0
+29,srvmax_nocheatplus,nocheatplus,,,0.107024823768302,TRUE,103,FALSE,N/A,Automatic,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0
+30,srvmax_novomotd,novomotd,,,9.91818002181424,TRUE,1,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+31,srvmax_noweather,noweather,,,0.34711507100278,TRUE,3,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+32,srvmax_onlyproxyjoin,onlyproxyjoin,,,9.91818002181424,TRUE,1,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+33,srvmax_permissions,permissions,,,0.253510632522075,TRUE,4,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+34,srvmax_permissionsbukkit,permissionsbukkit,,,-0.719346870307529,TRUE,7,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0
+35,srvmax_permissionsex,permissionsex,,,0.219345253317167,TRUE,154,FALSE,N/A,Automatic,0,0,1,1,1,1,0,0,0,0,0,1,1,0,1,0,1,0,0,0,1,0,0
+36,srvmax_plotme-defaultgenerator,plotme-defaultgenerator,,,0.39226786891478,TRUE,3,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,0,0,0,0,1,1,1,0,1,0,0
+37,srvmax_prism,prism,,,1.59510192255386,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+38,srvmax_quickshop,quickshop,,,5.17106077738316,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+39,srvmax_savagedeathchest,savagedeathchest,,,0.0517017442028077,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+40,srvmax_scavenger,scavenger,,,3.02843404904372,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+41,srvmax_securitypatches,securitypatches,,,2.96956431078984,TRUE,2,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+42,srvmax_skinsrestorer,skinsrestorer,,,0.687763267755521,TRUE,9,TRUE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+43,srvmax_staffchat,staffchat,,,1.25764700897034,TRUE,3,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+44,srvmax_survival,survival,,,0.0632806265870058,TRUE,2,TRUE,N/A,N/A,0,0,0,0,0,0,0,0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+45,srvmax_takeanumber,takeanumber,,,3.64192774476591,TRUE,1,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+46,srvmax_tardis,tardis,,,0.300087518170682,TRUE,3,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+47,srvmax_vanilla,vanilla,,,0.0632806265870058,TRUE,2,FALSE,N/A,N/A,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,-1,0,0,0,0,0,0
+48,srvmax_vanishnopacket,vanishnopacket,,,0.202192210988172,TRUE,17,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0
+49,srvmax_vault,vault,,,0.533451628235183,TRUE,123,FALSE,No discretion,Automatic,0,0,0,1,1,1,1,0,1,0,0,1,0,0,0,0,1,0,0,1,1,0,0
+50,srvmax_votifier,votifier,,,0.0686772552593764,TRUE,16,FALSE,N/A,Automatic,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0
+51,srvmax_weatherman,weatherman,,,0.492000116178283,TRUE,5,FALSE,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+52,srvmax_worldborder,worldborder,,,0.579373739025283,TRUE,31,FALSE,N/A,Automatic,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0

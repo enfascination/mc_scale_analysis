@@ -1,0 +1,120 @@
+pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
+source(paste0(pathLocal,"header_redditscrape.r"))
+library(stringr)
+library(mallet)
+
+
+### get sposts down to server/week or server/dataset
+### start with server/week/plugin
+splugins <- rbind(fread(paste0(pathData, 'step4_reddit_mcservers.csv')), fread(paste0(pathData, 'step4_omnimc_mcservers.csv')))
+splugins[,':='(date_post=ymd(date_post))] ### get dates into the right format and columns in splugins
+splugins[, feat:=tolower(feat)]
+### careful here.  some servers were spotted under mutliple data sources.  prefer reddit over mcs over omni
+g1 <- splugins[dataset_source=="omni",unique(srv_addr)]
+g2 <- splugins[dataset_source=="mcs_org",unique(srv_addr)]
+g3 <- splugins[dataset_source=="reddit",unique(srv_addr)]
+splugins <- splugins[(dataset_source %in% c("mcs_org", "reddit")) | (dataset_source=="omni" & srv_addr %ni% intersect(g1, union(g2, g3)))]
+splugins <- splugins[(dataset_source %in% c("omni", "reddit")) | (dataset_source=="mcs_org" & srv_addr %ni% intersect(g2, g3))]
+#splugins <- splugins[srv_addr %ni% intersect(g1, union(g2, g3))]
+setkey(splugins, dataset_source, post_uid, date_post, srv_addr)
+
+
+#mc_forbid  <- splugins[feat %in% word_forbid[,1], unique(srv_addr)]
+#head(mc_forbid)
+### topic analysis.
+###  then merge it into sserv
+documents <- rbind(
+                   read.table(paste0(pathData,"step4_reddit_texts.csv"), col.names=c("post_uid", "srv_addr", "dataset_source", "text"), colClasses=rep("character", 4), sep="\t", quote='"')
+                 , read.table(paste0(pathData,"step4_mcs_org_texts.csv"), col.names=c("post_uid", "srv_addr", "dataset_source", "text"), colClasses=rep("character", 4), sep="\t", quote='"'))
+#documents <- documents[documents$srv_addr %ni% mc_forbid,]
+mallet.instances <- mallet.import(documents$srv_addr, documents$text, paste0(pathData,"step4_stopwords.txt"), token.regexp = "\\p{L}[\\p{L}\\p{P}]+\\p{L}")
+n_topics <- 15
+topic.model <- MalletLDA(num.topics=n_topics)
+topic.model$loadDocuments(mallet.instances)
+#vocabulary <- topic.model$getVocabulary()
+#word.freqs <- mallet.word.freqs(topic.model)
+topic.model$setAlphaOptimization(20, 50)
+topic.model$train(1000)
+topic.model$maximize(40)
+doc.topics <- mallet.doc.topics(topic.model, smoothed=T, normalized=T)
+topic.words <- mallet.topic.words(topic.model, smoothed=T, normalized=T)
+topic.labels <- mallet.topic.labels(topic.model, topic.words, 3)
+lapply(1:n_topics, function(x) mallet.top.words(topic.model, topic.words[x,]))
+#documents[apply(doc.topics, 2, which.max),]
+topic.labels <- mallet.topic.labels(topic.model, topic.words, 3)
+plot(mallet.topic.hclust(doc.topics, topic.words, 0.3))
+#plot(mallet.topic.hclust(doc.topics, topic.words, 0.3), labels=topic.labels)
+stopics <- data.table(documents[,1:3],doc.topics)
+setnames(stopics, c("post_uid", "srv_addr", "dataset_source", paste0("T",1:n_topics)))
+setkey(stopics, srv_addr)
+stopics <- stopics[!srv_addr=='']
+
+
+#get the datasets similar enough that they can be merged
+### start with server/ping
+spings <- readRDS(paste0(pathData, "step2_serversweeks.rds"))
+setnames(spings, "server", "srv_addr")
+spings[,':='(date_ping=yw(year, week))] ### get dates into the right format and columns in spings
+spings[,':='(ping_uid=str_c(srv_addr,format(date_ping, format='%Y%m%d'), sep='_'))]
+
+### servers by week unique
+sposts <- splugins[,lapply(.SD, unique),by=.(post_uid, date_post), .SDcols=c(grep("^srv_*", names(splugins)), which(names(splugins) == "dataset_source"))]
+### do a rolling join, holy fucking hell
+### this require explaining
+spings[,':='(date_roll=date_ping)]
+sposts[,':='(date_roll=date_post)]
+sposts <- sposts[srv_repplug==T] ### this makes sure that the match below is to a server with plugin data, even if it is a bit further away than another measure without such data.  
+setkey(spings, srv_addr, date_roll)
+setkey(sposts, srv_addr, date_roll)
+spings_m <- sposts[spings, roll="nearest"]
+spings_m <- spings_m[,.(post_uid, ping_uid, date_post=date_post, date_ping=date_roll, srv_addr, srv_max=testnmaxquota, nmaxpop, pctmaxpop, nvisitsunobs=nvisits, nvisitsobs, nuvisits, genivisits, ncomm30visits, ncomm4visits, latency10ppl, latency20ppl, latency50pct, bestweek30visits, bestweek4visits, bghost, srv_v, srv_max_bak=srv_max, srv_details, srv_repstat, srv_repquery, srv_repplug, srv_repsample, dataset_source)]
+spings <- spings_m
+
+### merge with topics
+#spings <- spings[stopics, on=c("srv_addr")]
+spings <- merge(spings, stopics[,!"post_uid",with=F], by=c('dataset_source','srv_addr'), all.x=T, all.y=F)
+spings[!is.na(T1), srv_reptopic:=T]
+
+#get server/week down to server.  merge with posts, performance metrics, other things (topic data?)
+### keep developing spings a bit further
+#setkey(spings, dataset_source, ping_uid, date_ping, srv_addr)
+### reduce data down to one dependent type
+sserv <- spings
+sserv <- sserv[(bestweek4visits==T & bestweek30visits==T) | (is.na(bestweek4visits) & bestweek30visits==T)] ### get unique server rows, with a bias for the 4 visits measure over the 30visists measure
+sserv[,':='(bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)]
+sserv <- spings_m[bestweek30visits==T,.(srv_addr, ncomm30visits)][sserv,on=c("srv_addr")]
+#spings <- spings[dataset_source=='reddit']
+sserv[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_reptopic), sum, na.rm=T), by=dataset_source]
+
+sfeat <- splugins[sserv[!is.na(post_uid)], on=c("post_uid")]  ### CAREFUL!!!  the same IPs came from a few different data sources.  argg.
+sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repsample, srv_reptopic), sum, na.rm=T), by=dataset_source]
+expect_true(sfeat[,length(unique(srv_addr))] == sfeat[,length(unique(srv_addr)), by=dataset_source][,sum(V1)])
+expect_true(sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repsample, srv_reptopic), sum, na.rm=T), by=dataset_source][2,V4] == 0)
+
+
+#save everyting
+saveRDS(sserv, paste0(pathData, "step5_servers.rds"))
+saveRDS(spings, paste0(pathData, "step5_serversweeks.rds"))
+saveRDS(sfeat, paste0(pathData, "step5_serversweeksplugins.rds"))
+#spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
+
+### testing:
+if(0){
+    #ah hell.  first get number of unique serves in ping list: 61764
+    spings[,length(unique(srv_addr))]
+    #then u in reddit list: 1173
+    sposts[,length(unique(srv_addr))]
+    #then intersection: 295
+    length(intersect(sposts[,unique(srv_addr)], spings[,unique(srv_addr)]))
+    #then intersection of ping servers with community measuers: 171 or 291
+    length(intersect(sposts[,unique(srv_addr)], spings[(ncomm4visits >= 0),unique(srv_addr)]))
+    length(intersect(sposts[,unique(srv_addr)], spings[!(ncomm30visits == 0),unique(srv_addr)]))
+    #the intersection of reddit servers with plugins reported: 288, well, actually, about 100
+    length(intersect(sposts[!is.na(srv_repplug),unique(srv_addr)], spings[,unique(srv_addr)]))
+    length(intersect(sposts[srv_repquery == T,unique(srv_addr)], spings[,unique(srv_addr)]))
+    length(intersect(sposts[srv_repplug == T,unique(srv_addr)], spings[,unique(srv_addr)]))
+    #then intersection of ping servers with community measuers and reddit servers with plugins reported.  That is what I should end up with.
+    ### 44 or 80
+    length(intersect(sposts[srv_repplug == T,unique(srv_addr)], spings[(ncomm4visits >= 0) ,unique(srv_addr)]))
+    length(intersect(sposts[srv_repplug == T,unique(srv_addr)], spings[!(ncomm30visits == 0),unique(srv_addr)]))
+}
