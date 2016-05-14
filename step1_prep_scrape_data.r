@@ -59,3 +59,5 @@ dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latpct50 FLOAT DEFAULT NUL
 dbSendQuery(con, "UPDATE serverspings SET latpct50 = nlatency WHERE nlatency != -1 AND pctquota > 0.5")
 
 tt <- timed()
+
+dbDisconnect(con )

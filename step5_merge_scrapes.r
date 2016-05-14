@@ -55,10 +55,26 @@ stopics <- stopics[!srv_addr=='']
 spings <- readRDS(paste0(pathData, "step2_serversweeks.rds"))
 setnames(spings, "server", "srv_addr")
 spings[,':='(date_ping=yw(year, week))] ### get dates into the right format and columns in spings
+spings[date_ping==max(date_ping), date_ping:=Sys.Date()]  ### for some reason, servers that go to-date read as going to far in the future
 spings[,':='(ping_uid=str_c(srv_addr,format(date_ping, format='%Y%m%d'), sep='_'))]
+### amount of time these servers were up, and their first and last weeks
+spings[,':='(weeks_up=.N, date_ping_1st=min(date_ping), date_ping_lst=max(date_ping) ),by=c("dataset_source", "srv_addr")]
+
+#require(vcd)
+#require(MASS)
+#library(fitdistrplus)
+#fitdistr(spings[,.N,by=srv_addr]$N, "exponential")
+#descdist(spings[,.N,by=srv_addr]$N, discrete = F)
+#descdist(spings[,.N,by=srv_addr]$N, discrete = T)
 
 ### servers by week unique
 sposts <- splugins[,lapply(.SD, unique),by=.(post_uid, date_post), .SDcols=c(grep("^srv_*", names(splugins)), which(names(splugins) == "dataset_source"))]
+### I checked thoroughly, and this is the right place to measure for jubilees.  plugins has it, but only at the timescale of plugin scrapes
+### this is an impoerfect measure of jubiles because lead could work as well as lag, and I can't figure out how to match the ping observation to this, and if I could, it's all so coarse that it probably wouldn't matter
+setkey(sposts, srv_addr, date_post)
+#sposts[,list(date_post, srv_v, shift(srv_v), jubilees=srv_v != shift(srv_v)),by=srv_addr]
+sposts[, jubilees := (srv_v != shift(srv_v)), by = srv_addr]
+
 ### do a rolling join, holy fucking hell
 ### this require explaining
 spings[,':='(date_roll=date_ping)]
@@ -67,7 +83,7 @@ sposts <- sposts[srv_repplug==T] ### this makes sure that the match below is to 
 setkey(spings, srv_addr, date_roll)
 setkey(sposts, srv_addr, date_roll)
 spings_m <- sposts[spings, roll="nearest"]
-spings_m <- spings_m[,.(post_uid, ping_uid, date_post=date_post, date_ping=date_roll, srv_addr, srv_max=testnmaxquota, nmaxpop, pctmaxpop, nvisitsunobs=nvisits, nvisitsobs, nuvisits, genivisits, ncomm30visits, ncomm4visits, latency10ppl, latency20ppl, latency50pct, bestweek30visits, bestweek4visits, bghost, srv_v, srv_max_bak=srv_max, srv_details, srv_repstat, srv_repquery, srv_repplug, srv_repsample, dataset_source)]
+spings_m <- spings_m[,.(post_uid, ping_uid, date_post=date_post, date_ping=date_roll, srv_addr, srv_max=testnmaxquota, nmaxpop, pctmaxpop, nvisitsunobs=nvisits, nvisitsobs, nuvisits, genivisits, ncomm30visits, ncomm4visits, latency10ppl, latency20ppl, latency50pct, bestweek30visits, bestweek4visits, bghost, jubilees, srv_v, srv_max_bak=srv_max, srv_details, srv_repstat, srv_repquery, srv_repplug, srv_repsample, dataset_source)]
 spings <- spings_m
 
 ### merge with topics

@@ -5,7 +5,8 @@ import json
 
 
 ### start with reddit data
-reddit_datasets = ( "20141105" , "20150205"  , "20150513" , "20150617" , "20150721" , "20150828" , "20150923" , "20151026" , "20151123" , "20151230", "20160202", "20160229", "20160323")
+#reddit_datasets = ( "20141105" , "20150205"  , "20150513" , "20150617" , "20150721" , "20150828" , "20150923" , "20151026" , "20151123" , "20151230", "20160202", "20160229", "20160323")
+reddit_datasets = [f.strip() for f in open("lib_datasets_reddit.txt",'r').readlines()]
 ### gather disparate reddit scrapes into one big file
 cat_mc_json_logs(
     [pathDataInPlugins+dataset_date+"/"+"mcservers_step3.txt" for dataset_date in reddit_datasets]
@@ -16,7 +17,8 @@ cat_mc_json_logs(
 
 
 ### the do all master scrapes
-omni_data_dates = ( "20150603" , "20150603" , "20150828" , "20150617" , "20150923" , "20151101" , "20151230" , "20160202" , "20160229" , "20160323" )
+#omni_data_dates = ( "20150603" , "20150603" , "20150828" , "20150617" , "20150923" , "20151101" , "20151230" , "20160202" , "20160229" , "20160323" )
+omni_data_dates = [f.strip() for f in open("lib_datasets_plugins.txt",'r').readlines()]
 omni_data_files = ( 
         "20150603_startedmerging/mcorgservers_step3.txt"
         , "20150603_startedmerging/mcservers_step3_merged.txt"
@@ -28,6 +30,8 @@ omni_data_files = (
         , "20160202"+"/"+"mcservers_step3_master.txt"
         , "20160229"+"/"+"mcservers_step3_master.txt"
         , "20160323"+"/"+"mcservers_step3_master.txt")
+        , "20160406"+"/"+"mcservers_step3_master.txt")
+        , "20160504"+"/"+"mcservers_step3_master.txt")
 print("concatenate master logs")
 cat_mc_json_logs(
     [pathDataInPlugins+dataset_file for dataset_file in omni_data_files]
