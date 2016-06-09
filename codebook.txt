@@ -1,0 +1,35 @@
+Basic:A basic variable describes essential and basic background information for a component.
+
+Biophysical:Biophysical variables describe just that: important biophysical properties, largely of environmental commons, that are not captured by a more specific theme.
+
+Causation:A variable with this theme describes issues of causality, which is a complex subject. Most basically this theme is associated with variables that describe different types of causation and different types of causes of environmental problems.
+
+Context:contextual variable relates the component with which it associated to the social and/or ecological setting of a particular interaction and/or case.
+
+Ecosystem services:Variables associated with this theme describe factors that affect or describe the provision of important ecosystem services by a natural resource.
+
+Enforcement:Enforcement involves several different processes, including monitoring for violations of rules, sanctioning violators, and conflict resolution mechanisms involved in this process. Variables that relate to any of these processes should be attached to this theme.
+
+External:Variables with this theme relate a component to processes external to the case with which the component is associated.
+
+Heterogeneity:Variables with this theme describe important ways in which the member of an actor group differ from each other.
+
+Incentives: This theme is associated with variables that are not directly related to institutions and rules, but which still play a role in affecting the incentives that commons users have to ameliorate or exacerbate the commons they use.
+
+Institutional-biophysical linkage:This is a sub-theme of the institutions theme, and describes those variables that ask about the relationship between a set of institutions and a biophysical aspect of a commons.
+
+Institutions:Variables with this theme describe the social institutions (rules, property rights) that are used to organize and direct human behavior. It does not include monitoring and enforcement of these institutions, as these are associated with the Enforcement theme.
+
+Knowledge and uncertainty:Variables with this theme describe levels of knowledge that actor groups have regarding a commons, as well as factors that affect how much uncertainty there is in the status and dynamics of that commons.
+
+Leadership:Leaders play an important role in commons management, most traditionally by providing for public goods needed to organize commons users. But there are other possible roles, and variables associated with this theme can relate to any role that a leader might play in an interaction.
+
+Outcomes:This theme is attached to variables that deal with any outcomes that are produced by the actions of relevant actors in an interaction.
+
+Resource renewability:Variables associated with this theme deal with the ability of a natural resource to be highly productive and renewable.
+
+Social capital:Social capital captures the processes that enable the members of an actor group to work effectively together. Variables associated with this theme describe factors that affect or in some way express the level of social capital among members of a group.
+
+Spatial:Variables associated with the Spatial theme describe important spatial patterns or dynamics, such as the spatial heterogeneity of a commons, or whether or not a user group resides within a particular commons.
+
+Technology:This theme is attached to variables that consider the role that technology and infrastructure have in affecting commons outcomes.
