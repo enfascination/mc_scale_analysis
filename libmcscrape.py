@@ -114,6 +114,10 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 mc = json.loads(mcline)
                 ### for data quality filtering and logging
                 if not mc['reported_status']: continue
+                #fix a mistake from higher up the pipeline in which vanilla servers reporting full queries get listed as not reporting plugins, as opposed to reporting no plugins
+                if not mc.get('reported_plugins',False) and ( mc.get('plugins_names', False) == [] ):
+                    mc['reported_plugins'] = True
+                    mc['plugins_names'] = ['VANILLA_SERVER',]
                 srv_details = mc['reported_status'] + mc['reported_query'] + mc.get('reported_plugins', False) 
                 #print("srv_details", srv_details )
                 ### fixed to delete because they are getting fixed earlier int he pipeline but it's ok if i forget because they are benign
