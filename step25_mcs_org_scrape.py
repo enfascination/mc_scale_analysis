@@ -23,7 +23,7 @@ data_path = '/Users/sfrey/projecto/research_projects/minecraft/mcsdotorg_server_
 #s_mcdata_in_obs2  = data_path+'servers_20150309.csv'
 #s_mcdata_in_obs1  = data_path+'servers_20141126.csv'
 #data_dates = ["20151101", "20150513", "20150309", "20141126"]
-data_dates = [f.strip() for f in open("lib_datasets_players.txt",'r').readlines()]
+data_dates = [f.strip() for f in open("lib_datasets_mcsorg.txt",'r').readlines()]
 s_mc_data = [data_path+'servers_'+date+'.csv' for date in data_dates]
 
 ### merge both csv files and their metadata into a json file
