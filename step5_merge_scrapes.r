@@ -58,7 +58,7 @@ spings[,':='(date_ping=yw(year, week))] ### get dates into the right format and 
 spings[date_ping==max(date_ping), date_ping:=Sys.Date()]  ### for some reason, servers that go to-date read as going to far in the future
 spings[,':='(ping_uid=str_c(srv_addr,format(date_ping, format='%Y%m%d'), sep='_'))]
 ### amount of time these servers were up, and their first and last weeks
-spings[,':='(weeks_up=.N, date_ping_1st=min(date_ping), date_ping_lst=max(date_ping) ),by=c("dataset_source", "srv_addr")]
+spings[,':='(weeks_up=.N, date_ping_1st=min(date_ping), date_ping_lst=max(date_ping) ),by=c("srv_addr")]
 
 #require(vcd)
 #require(MASS)

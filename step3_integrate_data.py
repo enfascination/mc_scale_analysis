@@ -29,9 +29,11 @@ omni_data_files = (
         , "20151230"+"/"+"mcservers_step3_master.txt"
         , "20160202"+"/"+"mcservers_step3_master.txt"
         , "20160229"+"/"+"mcservers_step3_master.txt"
-        , "20160323"+"/"+"mcservers_step3_master.txt")
-        , "20160406"+"/"+"mcservers_step3_master.txt")
-        , "20160504"+"/"+"mcservers_step3_master.txt")
+        , "20160323"+"/"+"mcservers_step3_master.txt"
+        , "20160406"+"/"+"mcservers_step3_master.txt"
+        , "20160504"+"/"+"mcservers_step3_master.txt"
+        , "20160602"+"/"+"mcservers_step3_master.txt"
+        )
 print("concatenate master logs")
 cat_mc_json_logs(
     [pathDataInPlugins+dataset_file for dataset_file in omni_data_files]
@@ -77,7 +79,10 @@ with open(pathData+"tmp_step3_scraped_omnimc_posts"+".json", 'r') as infile:
             counter += 1
             mc = json.loads(line)
             ### merging of relevant fields, incl ["id", "title", "selftext", "primary_tags", "ip", "port", "version", "banner", "created", "updated", "youtube_video", "website_url", "country_code", "votes", "rank", "uptime", "totaltime", "daily_uptime", "daily_totaltime"]
-            mco = d_mcs_org.get(standardize_address(mc['mc_addr'])+'_'+map_omni_to_mcs_org[mc['dataset_date']], False)
+            mco = False
+            if map_omni_to_mcs_org.get(mc['dataset_date'], False):
+                if d_mcs_org.get(standardize_address(mc['mc_addr'])+'_'+map_omni_to_mcs_org[mc['dataset_date']], False):
+                    mco = d_mcs_org[ standardize_address(mc['mc_addr'])+'_'+map_omni_to_mcs_org[ mc['dataset_date'] ] ]
             if mco:
                 counter2 += 1
                 mc['dataset_source'] = 'mcs_org'
