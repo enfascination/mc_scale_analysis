@@ -11,8 +11,8 @@ tt <- timed()
 ### REDUCED DATASET: one row per server per week or per player per sever per week
 ### reset by week tables
 if (make_db) {
-  xx <- dbSendQuery(con, "DROP TABLE IF EXISTS playersweeks")
-  xx <- dbSendQuery(con, "DROP TABLE IF EXISTS serversweeks")
+    xx <- dbSendQuery(con, "DROP TABLE IF EXISTS playersweeks")
+    xx <- dbSendQuery(con, "DROP TABLE IF EXISTS serversweeks")
 
     ### reduced dataset: one row per server per week
     ###   also initialize those columsn taht are cheap and easy to do with a simple group clause

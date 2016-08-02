@@ -47,16 +47,16 @@ tt <- timed()
 
 ### ADD columns to server data in prep for reduction
 ###    pctquota column
-dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN pctquota FLOAT DEFAULT NULL")
-dbSendQuery(con, "UPDATE serverspings SET pctquota = CAST(npop AS FLOAT)/nquota WHERE nquota > 0 ")
+xx <- dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN pctquota FLOAT DEFAULT NULL")
+xx <- dbSendQuery(con, "UPDATE serverspings SET pctquota = CAST(npop AS FLOAT)/nquota WHERE nquota > 0 ")
 ###    latency at 10 ppl
-dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latn20 FLOAT DEFAULT NULL")
-dbSendQuery(con, "UPDATE serverspings SET latn20 = nlatency WHERE nlatency != -1 AND npop > 20")
-dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latn10 FLOAT DEFAULT NULL")
-dbSendQuery(con, "UPDATE serverspings SET latn10 = nlatency WHERE nlatency != -1 AND npop > 10")
+xx <- dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latn20 FLOAT DEFAULT NULL")
+xx <- dbSendQuery(con, "UPDATE serverspings SET latn20 = nlatency WHERE nlatency != -1 AND npop > 20")
+xx <- dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latn10 FLOAT DEFAULT NULL")
+xx <- dbSendQuery(con, "UPDATE serverspings SET latn10 = nlatency WHERE nlatency != -1 AND npop > 10")
 ###    latency at 75%
-dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latpct50 FLOAT DEFAULT NULL")
-dbSendQuery(con, "UPDATE serverspings SET latpct50 = nlatency WHERE nlatency != -1 AND pctquota > 0.5")
+xx <- dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN latpct50 FLOAT DEFAULT NULL")
+xx <- dbSendQuery(con, "UPDATE serverspings SET latpct50 = nlatency WHERE nlatency != -1 AND pctquota > 0.5")
 
 tt <- timed()
 
