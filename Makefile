@@ -24,7 +24,10 @@ prepposts:
 	time python step3_integrate_data.py
 
 prepmerge:
+	time python step32_merge_sniffer.py
+	time python step35_json_to_feat_csv.py
 	time python step4_prep_topic_analysis.py
+	time R -f step45_merge_plugins.r
 	time R -f step5_merge_scrapes.r
 
 analysis:
