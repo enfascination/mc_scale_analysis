@@ -1,0 +1,124 @@
+action_admin_up : does it, by default, concentrate power or auhority of the operator oran admin class.
+SKIP: action_other_down: does it decrease the number of actions that normal players can perform (this might now be redundnat with choice, forbid, or free).  maybe skip it
+grief: is it excplitly intended to managing the problem ofbad behavior?
+inoutworld: does it invoke or involve the use of real world categories or systems or norms  from outside of the game? (skype, reddit, etc)
+SKIP: inst: does it install a fully-fledged social isntitution, besides a shop or a poly?  examples are jobs, towny, other complex plguins that implement social systems. this can be -1 if plugin/keyword invokes lack of such isntitutions (vanilla, anarchy)
+SKIP: isnorm: for keywords and tags, does this suggest that the text is being used to do broadcast norms?)
+normpath does it empower admins to impose/advertise/broadcast/suggest/select in favor of social norms?
+forbid: whatever it's goal, does it accomplish this goal by framing itself in terms of  forbiding certain types of things or behaviors
+boundary: member boundaries; does it descrie conditions under which one may join or must leave the community. if boundaryis checked, adminup is probably checked, and norm possibly shouldn't be, but can be ("18+" yes, "member" no) maybe just one of admin-up or norm are checked when boundary is checked?
+position: does it describe or imply existence of different positions in a server, or increase heterogeneity in player abilities (private property plugins)?
+choice: (+-1) does it change the number of actions that can be performed by players (this might be redudnant with more informative columns, like action_other_down). actions should relate to resources that servers usually have to manage (rather than adding non-goverannce related game items,w hcih goe to game)
+info: (+-1) does it relate to the broadcast of useful information by admins  
+infopath: does it provision a communication tool, or set larger bounds on what or how communication occurs?
+aggregate: does it enable some subset of actors to incfluence the mapping of actions to outcomes
+payoff: is its intention is to make existing actions easier or harder, or primarily enables reconfiguration of action payoffs. shops don't count, since htey are covered in another column. (teleport)
+scope: (+-1) does it change the list of possible results of actions (outcomes). difference is between asking for no fires (norm), programmatically preventing creation of fire (choice), or programmatically preventing spread of fire (scope).
+shop: does it provision a shop/economy
+tech: relates to network protocols, developer tools,a nd other low-level stuff
+game: does it relate only to details of minecraft gameplay and game experience, rather than explicitly to governance
+loopadmin:  (+-1) does it require looping an admin in to work (1), ordoes it "just work" (-1)?  does it imply that users or admins have discretion to make a choice? does it, on the other hand, reduce discretion through automatically implemented constraints or enforcement/monitoring.  does it make un/desirable actions impossible/mandatory?.  there are exceptions, but if isnorm is checked, this is likely 1. if scope is checked, this is likely -1.  if adminup or other down or grief are checked, this should likelly h ave some value.  mabybe not otherwise.  another possible way to look at it: do you install and forget the plugin, or does it provide in-game commands to admins and require the appropriate use of those commands to work as advertised.
+poly: does it create subgroups within a server?  if this is checked, then inst, infop, aggregate, and position would be checked, and should maybe be unchecked.  this should be for subgroups of equal power (factiosn), not hierarchical subgroups (admins/staff).  the positions column is for both.
+SKIP: scale: relates explicitly to large servers (useful?  not sure.  probably not)
+apply: does it relate to or imply an application process, or the idea of membership (incl whitelists)
+resource: does it specifically relate to the management of a resource: world resources (diamonds), server resources (cpu/lag), community public goods (cool buildings), outsiders (griefing, trolling), insiders (community, trust, morale).
+
+
+ALL:
+action_admin_up	
+action_other_down	
+grief	
+inoutworld	
+inst	
+estnorm	
+forbid	
+boundary	
+position	
+choice	
+info	
+infopath	
+aggregation	
+payoff	
+scope	
+shop	
+tech	
+game	
+loopadmin	
+poly	
+property	
+chat
+
+
+ACTION SITCH
+choice	
+boundary	
+position	
+info	
+     infopath	
+aggregation	
+payoff	
+scope	
+     chat
+     shop	
+tech	
+game	
+
+
+
+
+DESGIN PRINCIPLES
+boundary	
+property	
+estnorm	
+poly	
+inoutworld	
+chat
+aggregation	
+
+
+SNERST SCALING Q's
+loopadmin	
+estnorm	
+     property	
+     shop	
+     tech	
+     game	
+inoutworld	
+poly
+aggregation	
+grief
+
+AD HOC/EXPLORATORY
+action_admin_up	
+action_other_down	
+grief	
+forbid	
+inst	
+
+
+
+CONFIDENCE:
+grief	
+inoutworld	
+estnorm	
+boundary	
+position	
+info	
+infopath	
+aggregation	
+payoff	
+shop	
+tech	
+game	
+loopadmin	
+poly	
+property	
+chat
+
+NOT CONFIDENT:
+action_admin_up	
+action_other_down	
+inst	
+forbid	
+choice	
+scope	
