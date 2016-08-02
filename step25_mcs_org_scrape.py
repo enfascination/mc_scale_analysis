@@ -71,7 +71,7 @@ with open(pathData+'mcorgservers_omni_step1.txt', 'w') as f_mcdata_out:
                 mc['daily_totaltime'] = int(mc['daily_totaltime'])
                 mc['uptime'] = int(mc['uptime'])
                 mc['daily_uptime'] = int(mc['daily_uptime'])
-                mc['tags'] = mc['tags'].split(', ')
+                mc['tags'] = [tag.strip() for tag in mc['tags'].split(',')]
                 ### new fields
                 #mc['measure_one'] = str(mc['id']) in l_ids_obs1
                 #mc['measure_two'] = str(mc['id']) in l_ids_obs2
