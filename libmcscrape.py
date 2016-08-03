@@ -126,7 +126,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 #fix a mistake from higher up the pipeline in which vanilla servers reporting full queries get listed as not reporting plugins, as opposed to reporting no plugins
                 if not mc['reported_plugins'] and ( mc.get('plugins_names', False) == [] ):
                     mc['reported_plugins'] = True  ### this is fixing a mistake i made
-                    mc['plugins_names'] = ['VANILLA_SERVER',]
+                    mc['server_property_names'] = ['VANILLA_SERVER',]
                 if 'reported_sniff' not in mc:
                     mc['reported_sniff'] = False
                 srv_details = mc['reported_status'] + mc['reported_query'] + mc['reported_plugins'] + mc['reported_sniff']
@@ -154,51 +154,62 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 ### add rows by data type
                 if 'server_version_number' not in mc and 'version' in mc: mc['server_version_number'] = mc['version']
                 srv_ver = mc['server_version_number'].encode('ascii', 'ignore')
+                ### process sniffer data
                 if mc['reported_sniff']:
-                    plugin_names_snf = []
+                    plugins_names_snf = []
+                    server_property_names_snf = []
                     if 'whitelist' in mc and mc['whitelist']:
-                        plugin_names_snf.append('WHITELISTED_SERVER')
+                        server_property_names_snf.append('WHITELISTED_SERVER')
                     if 'snf_gamemode' in mc:
                         if mc['snf_gamemode'] == 0:
                             if 'snf_hardcore' in mc and mc['snf_hardcore']:
-                                plugin_names_snf.append('gamemode_hardcore')
+                                server_property_names_snf.append('gamemode_hardcore')
                             else:
-                                plugin_names_snf.append('gamemode_survival')
+                                server_property_names_snf.append('gamemode_survival')
                         elif mc['snf_gamemode'] == 1:
-                            plugin_names_snf.append('gamemode_creative')
+                            server_property_names_snf.append('gamemode_creative')
                         elif mc['snf_gamemode'] == 2:
-                            plugin_names_snf.append('gamemode_adventure')
+                            server_property_names_snf.append('gamemode_adventure')
                     if 'snf_difficulty' in mc and mc['snf_difficulty'] is not None:
-                        plugin_names_snf.append('difficulty_'+str(mc['snf_difficulty']))
+                        server_property_names_snf.append('difficulty_'+str(mc['snf_difficulty']))
                     if 'snf_level_type' in mc and mc['snf_level_type'] is not None:
-                        plugin_names_snf.append('leveltype'+mc['snf_level_type'])
+                        server_property_names_snf.append('leveltype'+mc['snf_level_type'])
                     if 'text_short' in mc and \
                             'help_p1' in mc['text_short'] and \
                             mc['text_short']['help_p1'] is not None and \
                             len(mc['text_short']['help_p1']) > 0:
-                        plugin_names_snf.append('helppages')
-                    if len(plugin_names_snf) > 0: mc['plugins_names'] = plugin_names_snf
+                        server_property_names_snf.append('helppages')
+                    if 'server_property_names' in mc: mc['server_property_names'].extend( server_property_names_snf )
+                    elif len(server_property_names_snf) > 0: mc['server_property_names'] = server_property_names_snf
+                ### process location data, much but not all of which is sniffed
+                if ('location' in mc and mc['location']['country_code'] is not None)\
+                        or ('country code' in mc and mc['country code'] != '')\
+                        or ('country_code' in mc and mc['country_code'] != ''):
+                    if 'location' in mc and 'country_code' not in mc:
+                        mc['country_code'] = mc['location']['country_code']
+                    elif 'country code' in mc and 'country_code' not in mc:
+                        mc['country_code'] = mc['country code']
+                        del mc['country code']
+                    mc_cc = 'cc_'+mc['country_code'].lower()
+                    mc['server_property_names'] = mc.get('server_property_names', []).append(mc_cc)
+                if 'country code' in mc: 
+                    del mc['country code']
+                #
                 ### start wrting to file
                 if mc['dataset_source'] in ('omni', 'mcs_org', 'reddit'):  
                     server_inventory[srv_details] += 1
-                    if ('location' in mc and mc['location']['country_code'] is not None)\
-                            or ('country code' in mc and mc['country code'] != '')\
-                            or ('country_code' in mc and mc['country_code'] != ''):
-                        if 'location' in mc and 'country_code' not in mc:
-                            mc['country_code'] = mc['location']['country_code']
-                        elif 'country code' in mc and 'country_code' not in mc:
-                            mc['country_code'] = mc['country code']
-                            del mc['country code']
-                        mc_cc = 'cc_'+mc['country_code'].lower()
-                        row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), mc_cc, 'tag_'+mc_cc, '', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
-                    elif 'country code' in mc: 
-                        del mc['country code']
-                        mcdata_csv.writerow(row_csv)
                     if (srv_details >= 3):
+                        ### write plugin feature rows
                         for t in mc['plugins_names']: 
                             row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'plugin_'+t.lower(), '', 'plugin', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
                             mcdata_csv.writerow(row_csv)
+                        ### write server property feature rows
+                        if 'server_property_names' in mc: 
+                            for t in mc['server_property_names']: 
+                                row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'property_'+t.lower(), '', 'property', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
+                                if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
+                                mcdata_csv.writerow(row_csv)
                     if mc['dataset_source'] in ('mcs_org', 'reddit'):  ### not ideal way to handle reddit speific metadata.  better to refactor and make a redi specific function, but oh well
                         if mc.get('is_wanted'): continue  ### XXX this is reddit specific and not good here
                         ### handle an error
@@ -208,7 +219,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                             srv_details = 0
                             print("PROBLEM DFASDDDD: server slipped through bug around empty candidate list and had bad data")
                             continue
-                        ### now process text
+                        ### write tag feature rows
                         mc_tags = mc['primary_tags']
                         mc_tags.extend(mc.get('secondary_tags', []))
                         for t in mc_tags:
@@ -217,10 +228,12 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASD: update your headers")
                             mcdata_csv.writerow(row_csv)
                         mc_text = re.sub(r'[^a-zA-Z0-9=]', ' ', mc['selftext'].lower())
+                        ### write keyword feature rows
                         for t in juicy_word_beginnings:
                             #if re.search(r'\b'+t+r'\b', mc_text):
                             if re.search(r'\b'+t, mc_text):
                                 mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'keyword_'+t.lower(), u'', 'keyword', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                    ### write sign feature rows, and, redundanlty, keywords in the signs
                     if mc['reported_sniff']:
                         if 'text_short' in mc:# and type(mc['text_short']) == type({}):
                             for text_short_type, text_short in mc['text_short'].items():
