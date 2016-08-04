@@ -1,112 +1,32 @@
-
-
-#source('/Users/sfrey/projecto/research_projects/minecraft/server_surveyor/step5_plot_population_scaling.r')
-library(ggplot2)
-library(gridExtra)
-library(ggthemes)
-`%ni%` = Negate(`%in%`) ### help functions
-options(gsubfn.engine = "R")
-options(sqldf.driver= "SQLite")
-library(sqldf)
-library(data.table)
-library(dplyr)
-library(pls) ### pcr
-library(stringr)
-library(MASS)
-library(testthat)
-library(microbenchmark)
-
-library(reshape2)
-library(car)
-library(caret)
-library(caretEnsemble)
-library(mlbench)
-library(randomForest)
-library(glmnet)
-library(doMC)
-registerDoMC(cores = 8)
-#library(pROC)
-#library(sfsmisc)
-library(rms)
-
 ### initialize globals
 pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
-source(paste0(pathLocal,"header_redditscrape.r"))
-source(paste0(pathLocal,"plugin_classes.r"))
+source(paste0(pathLocal,"local_settings.R"))
+source(paste0(pathLocal,"lib_step6_analysis.r"))
 
 ### notes:
 ###  if there is lots of data 50/50 training/test is fine, and you shouldn't calculate full lasso paths (dfmax=50 or 100) and it's important to filter columns down before widening the matrix.  
 
-mc <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
+mc <- readRDS(paste0(pathData, "step55_serversweeksplugins.rds"))
 expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
-mc_bak <- copy(mc)
-#mc[,dataset_source:=as.numeric(factor(dataset_source))]
-mc[,dataset_reddit:=ifelse(dataset_source=="reddit",1,0)]
-mc[,dataset_omni:=ifelse(dataset_source=="omni",1,0)]
-mc[,dataset_mcs_org:=ifelse(dataset_source=="mcs_org",1,0)]
-mc[,':='(jubilees=as.integer(jubilees), srv_repquery=as.integer(srv_repquery), srv_repplug=as.integer(srv_repplug), srv_repsample=as.integer(srv_repsample), srv_repsniff=as.integer(srv_repsniff), date_ping_int=as.integer(date_ping), weeks_up_todate=as.numeric(weeks_up_todate))]
+n_servers <- mc[,length(unique(srv_addr))]; n_servers 
+dim(mc)
 
+mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=max(2, as.integer(n_servers/5000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 
-### need to filter out servers that deiate too far from vanilla gameplay
-###  and when I do this, I need to do this before performing and filtering on plugin counts, else I'll end up with plugins used only once by the unfilitered sites
-### this is from one of the header files
-#word_forbid <- matrix(c("hub", "minigames", "mini games", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "robbit", "creative", "adventure", "playerheads", "mcmmo", "multiverse-portals", "pvp", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "factions", "kits", "multiworld", "roleplay", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
-word_forbid_short <- matrix(c("hub", "minigames", "mini games", "multiverse", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "multiverse-portals", "robbit", "mcmmo", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "multiworld", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
-mc_whitelist <- mc[feat %in% whitelist, unique(srv_addr)]
-mc_forbid  <- mc[feat %in% word_forbid_short[,1], unique(srv_addr)]
-#mc_coded  <- mc[feat %in% coded_key_keywords_2[,feat], unique(srv_addr)]
-mc <- mc[(srv_addr %ni% mc_forbid) ,]
-mc <- mc[ncomm4visits>0]
-mc[,ncomm4visits_log:=log2(ncomm4visits+1)]
-#mc <- mc[srv_max <= 1000] ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i picked 5000  subjectively basedon the distirbution of server sizes
-mc[srv_max >= 1000, srv_max_log:=log10(1000)]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i picked 5000  subjectively basedon the distirbution of server sizes
-#mc <- mc[dataset_source != 'omni']
-#mc_w <- mc_w[(srv_addr %in% mc_coded) ,]
-
-#mc <- mc[feat_source=='tag']
-mc <- mc[feat_source=='plugin']
-
-### create wide format: one column per plugin with binary checks
-### filter plugins used only once or twice before attempting widening
-mc[,feat_count:=.N,by="feat_code"]
-n_servers <- mc[,length(unique(srv_addr))]
-feat_count_min <- max(2, as.integer(n_servers/5000))
-mc <- mc[feat_count > feat_count_min]
-#mc <- mc[feat_count > 2]
-mc[!is.na(keyword_count) | !is.na(tag_count) ,norm_count:=sum(keyword_count,tag_count, na.rm=T), by=.(srv_addr)]
-#mc[!is.na(keyword_count) | !is.na(sign_count) ,length(unique(srv_addr))]
 
 plugin_codes <- read.csv(file=paste0(pathData, "plugin_codes_byhand.csv"))
 plugin_codes <- plugin_codes[1:(nrow(plugin_codes)-1),]
 #cor(plugin_codes[4:ncol(plugin_codes)])
 mc <- merge(mc, plugin_codes, by=c('feat_code'), all.x=T, all.y=F)
-
-#mc_sample_n <- sample(1:nrow(mc),10000)
-##mc_sample_n <- 1:nrow(mc)
-#mc <- mc[mc_sample_n]
-
-
 mc_h <- merge(
-        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "ncomm4visits_log", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_todate", "date_ping_int", "plugin_count", "keyword_count", "tag_count", "sign_count", 'norm_count' )],
+        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_todate", "date_ping_int", "plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count" )],
         mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "property", "chat", "apply", "resource")]
-		, by="srv_addr", all=T)
-
-### preprocessing
-#mc_w[srv_max > 5000,srv_max:=4999]
-mc_h_bak <- copy(mc_h)
-
-### selection bias dealt with here
-#mc_h <- (mc_h[ (!is.na(keyword_count) | !is.na(tag_count)) & !is.na(sign_count)])
-#mc_h <- (mc_h[!is.na(sign_count)])
-##mc_h[is.na(sign_count),keyword_count:=0]
-#mc_h[is.na(keyword_count),keyword_count:=0]
-#mc_h[is.na(tag_count),tag_count:=0]
+        , by="srv_addr", all=T)
 
 ### define predictors
-setnames(mc_h, "ncomm4visits_log", "y")
-vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "srv_repquery", "srv_repplug", "srv_repsample", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "keyword_count", "tag_count", "sign_count"), c("action_admin_up", "action_other_down", "inst", "forbid"))
-vars_out <- c('y')
+vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "srv_repquery", "srv_repplug", "srv_repsample", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "keyword_count", "tag_count", "sign_count"), c("action_admin_up", "action_other_down", "inst", "forbid", 'y'))
+vars_out <- c('ylog')
 vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "weeks_up_todate", 'jubilees'), c("plugin_count"))
 #vars_in_feat <-  names(mc_h)[which(names(mc_h) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] 
 #vars_in_feat <- c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "estnorm", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", 'loopadmin', 'poly', 'property', 'chat')
@@ -116,21 +36,18 @@ vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 names(interact_xsrv) <- vars_in_feat_xsrv
 mc_h <- cbind(mc_h, interact_xsrv)
 
-set.seed(42)
-#inTrain <- createDataPartition(y = mc_h$y, p = .6, list = FALSE)  ### can't handle NAs
-inTrain <- sample(1:nrow(mc_h), 0.5*nrow(mc_h), replace=F)
-training <- mc_h[ inTrain,]
-testing <- mc_h[-inTrain,]
-dim(training)
+mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.5))
+training <- mc_split$train
+testing <- mc_split$test
 
 training_full_lasso <- training
-#training_full_lasso <- training_full_lasso[!is.na(y)]
+#training_full_lasso <- training_full_lasso[!is.na(ylog)]
 #setnames(training_full_lasso, (ncol(training)+1):ncol(training_full_lasso), paste("srvmax", names(training_full_lasso[,(ncol(training)+1):ncol(training_full_lasso), with=F]) , sep='_'))
-#training <- training[!is.na(y)]
+#training <- training[!is.na(ylog)]
 #factor_counts <- colSums(training_full_lasso[,vars_in_feat,with=F]) + 0.00001
 #factor_penalties <- c(rep(1, length(vars_in_nonfeat)), 1+feat_count_min/factor_counts, 1+feat_count_min/factor_counts )
 mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F])#[,1:300, with=F])
-     , y = training_full_lasso$y
+     , y = training_full_lasso$ylog
      #, y = log10(training_full_lasso$y+1)
      #form = y ~ .
      #, data = as.matrix(training_full)
