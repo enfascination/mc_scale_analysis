@@ -10,7 +10,7 @@ mc <- readRDS(paste0(pathData, "step55_serversweeksplugins.rds"))
 expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
 
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 
 
 

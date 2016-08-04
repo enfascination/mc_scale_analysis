@@ -9,10 +9,10 @@ source(paste0(pathLocal,"lib_step6_analysis.r"))
 mc <- readRDS(paste0(pathData, "step55_serversweeksplugins.rds"))
 expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
+dim(mc)
 ### filtering for analysis
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 feat_count_min <- max(2, as.integer(n_servers/5000))
-dim(mc)
 mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'tag', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
@@ -117,9 +117,6 @@ coef_nonzero(mc_rlm_fit)
 coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)
 coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)[which(coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha) != 0)]
 covTest(mc_rlm_fit)
-coef_nonzero <- function(mc_rlm_fit) {
-    data.frame(feat=coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@Dimnames[[1]][coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@i+1], beta=format( (coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@x), scientific=FALSE) )
-}
 
 dim(mc_w)
 dim(training_full_lasso)

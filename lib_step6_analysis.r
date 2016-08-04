@@ -28,6 +28,7 @@ registerDoMC(cores = 8)
 library(rms)
 library(broom)
 
+pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
 
 ### functions before data prep
 buildFeatureTablePickDependent <- function(spings, splugins, dependent='ncomm4visits') {

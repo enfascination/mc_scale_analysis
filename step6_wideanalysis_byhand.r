@@ -15,10 +15,10 @@ dim(mc)
 mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=max(2, as.integer(n_servers/5000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 
 
-plugin_codes <- read.csv(file=paste0(pathData, "plugin_codes_byhand.csv"))
-plugin_codes <- plugin_codes[1:(nrow(plugin_codes)-1),]
-#cor(plugin_codes[4:ncol(plugin_codes)])
-mc <- merge(mc, plugin_codes, by=c('feat_code'), all.x=T, all.y=F)
+plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand.csv")))
+plugin_codes_byhand <- plugin_codes_byhand[1:(nrow(plugin_codes_byhand)-1),]
+#cor(plugin_codes_byhand[4:ncol(plugin_codes_byhand)])
+mc <- merge(mc, plugin_codes_byhand, by=c('feat_code'), all.x=T, all.y=F)
 mc_h <- merge(
         mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_todate", "date_ping_int", "plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count" )],
         mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "property", "chat", "apply", "resource")]
@@ -89,7 +89,7 @@ mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_
                               )
      ### glmnet parameters #, penalty.factor = factor_penalties
      #, nlambda = 30 
-     #, dfmax=100
+     , dfmax=100
      #, pmax=20
      #, lamdba=c(0.1, 1, 2,5, 10, 20, 50, 100, 200, 500, 1000)
      #, exclude = factors_exclude
@@ -119,18 +119,6 @@ ff
 lm_fit <- lm(training_full_lasso$y~1)
 deviance(lm_fit)
 logLik(lm_fit)
-logLik_glmnet <- function(model, y) {
-    lm_fit <- lm(y~1)
-    dev_null <- deviance(lm_fit)
-    ll_null <- logLik(lm_fit)
-    ll_sat <- 0.5*dev_null + ll_null
-    dev_model <- tail(deviance(model),1)
-    ll_model <- 0.5*(-dev_model+dev_null) + ll_null
-    ll_model <- -0.5*dev_model + ll_sat
-    dev_ratio <- tail(model$dev_ratio,1)
-    dev_ratio <- 1 - dev_model/dev_null
-    return(ll_model)
-}
 logLik_glmnet(mc_rlm_fit$finalModel, training_full_lasso$y)
 deviance(mc_rlm_fit$finalModel)
 mc_rlm_fit
@@ -139,36 +127,14 @@ coef_nonzero(mc_rlm_fit)
 coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)
 coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)[which(coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha) != 0)]
 covTest(mc_rlm_fit)
-coef_nonzero <- function(mc_rlm_fit) {
-    data.frame(feat=coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@Dimnames[[1]][coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@i+1], beta=format( (coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@x), scientific=FALSE) )
-}
+
 
 dim(mc_p)
 dim(training_full_lasso)
 predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="nonzero")
 predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="coefficients")
 plot(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, xvar="lambda")
-get_rmse_from_nulllm <- function(fit, xdata, y) {
-    comp <- cbind(predict(fit, newdata=xdata), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])^2))^0.5
-}
-get_rme_from_nulllm <- function(fit, xdata, y) {
-    comp <- cbind(predict(fit, newdata=xdata), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])))
-}
-get_rmse_from_caret <- function(object, xdata, y) {
-    #print(class(y))
-    #print(class(object))
-    #print(class(xdata))
-    comp <- cbind(predict(object$finalModel, newx=xdata, s=object$bestTune$alpha, type="response"), y )
-    #print(head(comp))
-    mean(apply(comp, 1, function(x) (x[1] - x[2])^2))^0.5
-    #return(head(comp))
-}
-get_rme_from_caret <- function(object, xdata, y) {
-    comp <- cbind(predict(object$finalModel, newx=xdata, s=object$bestTune$alpha, type="response"), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])))
-}
+
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training[,vars_out,with=F])
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training_full_lasso$y)
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(mc_rlm_fit$trainingData)[,-which(names(mc_rlm_fit$trainingData)==".outcome")], mc_rlm_fit$trainingData$.outcome)
@@ -260,40 +226,7 @@ system(paste0('open -a Numbers ', pathLocal, "mc_feat.csv"))
                          
 
 ### enet degrees of freedom from https://openaccess.leidenuniv.nl/bitstream/handle/1887/12096/04.pdf
-enet.edf <- function(data, selected_variables, lambda2){
-    tr <- function(m) sum(diag(m))
-    A <- selected_variables
-    X_A <- as.matrix(data[,A])
-    evs <- eigen(t(X_A) %*% X_A, only.values=T)$values 
-    
-    #library(microbenchmark)
-    #microbenchmark(
-      #tr(X_A %*% solve(t(X_A) %*% X_A + lambda2 * diag(ncol(X_A))) %*% t(X_A))
-    #, tr(t(X_A) %*% solve(t(t(X_A)) %*% t(X_A) + lambda2 * diag(nrow(X_A))) %*% X_A)
-    #, sum(evs/(evs+lambda2))
-    #)
-    
-    return(sum(evs/(evs+lambda2)))
-}
 enet.edf( mc_feat_data, names(mc_feat_select), mc_rlm_fit$finalModel@lambda2)
-glmnet.edf <- function(data, selected_variables, lambda, alpha){
-    ###alpha is the [0,1] mixing parameter
-    lambda1 <-     alpha*lambda
-    lambda2 <- (1-alpha)*lambda
-    tr <- function(m) sum(diag(m))
-    A <- selected_variables
-    X_A <- as.matrix(data[,A])
-    evs <- eigen(t(X_A) %*% X_A, only.values=T)$values 
-    
-    #library(microbenchmark)
-    #microbenchmark(
-      #tr(X_A %*% solve(t(X_A) %*% X_A + lambda2 * diag(ncol(X_A))) %*% t(X_A))
-    #, tr(t(X_A) %*% solve(t(t(X_A)) %*% t(X_A) + lambda2 * diag(nrow(X_A))) %*% X_A)
-    #, sum(evs/(evs+lambda2))
-    #)
-    
-    return(sum(evs/(evs+lambda2)))
-}
 glmnet.edf( mc_rlm_fit$trainingData, names(mc_rlm_fit$trainingData)[coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@i], mc_rlm_fit$bestTune$lambda, mc_rlm_fit$bestTune$alpha)
 
 ### from python function def curseCategoryStats():
