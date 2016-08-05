@@ -5,6 +5,7 @@ import re
 import subprocess
 from pprint import pprint
 from shutil import copyfile
+from local_settings import geoip
 
 
 #a few functions
@@ -194,6 +195,18 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                     mc['server_property_names'] = mc.get('server_property_names', []).append(mc_cc)
                 if 'country code' in mc: 
                     del mc['country code']
+                ### if I didn't get one by other means, use geoip
+                if 'country_code' not in mc:
+                    sIP = ''
+                    sIPmatch = re.compile("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}") ### http://www.regular-expressions.info/examples.html
+                    if 'ip' in mc and sIPmatch.match(mc['ip']):
+                        sIP = mc['ip']
+                    elif 'iffy' in mc and 'server_ip_candidates' in mc and mc['server_ip_candidates']:
+                        for i, sIPtest in enumerate(mc['server_ip_candidates']):
+                            if 'ip' in mc and sIPmatch.match(sIPtest):
+                                sIP = mc['iffy']['server_ip_candidates'][i]
+                                break
+                    if sIP and geoip.country_code_by_addr(sIP): mc['country_code'] = geoip.country_code_by_addr(sIP)
                 #
                 ### start wrting to file
                 if mc['dataset_source'] in ('omni', 'mcs_org', 'reddit'):  
