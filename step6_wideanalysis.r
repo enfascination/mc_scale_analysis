@@ -31,7 +31,7 @@ names(mc_interactions) <- vars_in_feat_xsrv
 mc_w <- cbind(mc_w, mc_interactions)
 dim(mc_w)
 
-mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
+mc_split <- splitDataTestTrain(mc_h, proportions=c(0.4, 0.3, 0.3), validation_set=TRUE)
 training <- mc_split$train
 validate <- mc_split$validate
 testing <- mc_split$test

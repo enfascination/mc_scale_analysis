@@ -113,10 +113,10 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     mc <- mc[feat_source %in% keepFeatTypes]
     ### for every category type I keep, I have to get rid of servers that don't report that type
     ###   otherwise I get wierd selection bias issues in the analyses:w
-    if ('plugin' in keepFeatTypes) { mc <- mc[!is.na(plugin_count),] }
-    if ('tag' in keepFeatTypes) { mc <- mc[!is.na(tag_count),] }
-    if ('sign' in keepFeatTypes) { mc <- mc[!is.na(sign_count),] }
-    if ('keyword' in keepFeatTypes) { mc <- mc[!is.na(keyword_count),] }
+    if ('plugin' %in% keepFeatTypes) { mc <- mc[!is.na(plugin_count),] }
+    if ('tag' %in% keepFeatTypes) { mc <- mc[!is.na(tag_count),] }
+    if ('sign' %in% keepFeatTypes) { mc <- mc[!is.na(sign_count),] }
+    if ('keyword' %in% keepFeatTypes) { mc <- mc[!is.na(keyword_count),] }
     #mc <- mc[feat_source != 'keyword']
     #mc <- mc[feat_source=='tag']
     #mc <- mc[feat_source=='plugin']
