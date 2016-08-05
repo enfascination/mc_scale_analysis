@@ -154,7 +154,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 ### more prep and processing, but after filteringand ada data quality
                 ### add rows by data type
                 if 'server_version_number' not in mc and 'version' in mc: mc['server_version_number'] = mc['version']
-                srv_ver = mc['server_version_number'].encode('ascii', 'ignore')
+                srv_ver = str(mc['server_version_number'].encode('ascii', 'ignore'))
                 ### process sniffer data
                 if mc['reported_sniff']:
                     plugins_names_snf = []
@@ -180,8 +180,11 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                             mc['text_short']['help_p1'] is not None and \
                             len(mc['text_short']['help_p1']) > 0:
                         server_property_names_snf.append('helppages')
-                    if 'server_property_names' in mc: mc['server_property_names'].extend( server_property_names_snf )
-                    elif len(server_property_names_snf) > 0: mc['server_property_names'] = server_property_names_snf
+                    if server_property_names_snf: 
+                        if 'server_property_names' in mc: 
+                            mc['server_property_names'].extend( server_property_names_snf )
+                        else:
+                            mc['server_property_names'] = server_property_names_snf
                 ### process location data, much but not all of which is sniffed
                 if ('location' in mc and mc['location']['country_code'] is not None)\
                         or ('country code' in mc and mc['country code'] != '')\
@@ -218,7 +221,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
                             mcdata_csv.writerow(row_csv)
                         ### write server property feature rows
-                        if 'server_property_names' in mc: 
+                        if 'server_property_names' in mc and mc['server_property_names']: 
                             for t in mc['server_property_names']: 
                                 row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'property_'+t.lower(), '', 'property', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
                                 if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
@@ -236,7 +239,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                         mc_tags = mc['primary_tags']
                         mc_tags.extend(mc.get('secondary_tags', []))
                         for t in mc_tags:
-                            mc_tag = t.encode('ascii','ignore').lower().strip()
+                            mc_tag = str(t.encode('ascii','ignore')).lower().strip()
                             row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), mc_tag, 'tag_'+mc_tag, u'', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASD: update your headers")
                             mcdata_csv.writerow(row_csv)
