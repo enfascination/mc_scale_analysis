@@ -111,6 +111,12 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     #mc <- mc[dataset_source != 'omni']
     ### analysis specific searchy filtering 
     mc <- mc[feat_source %in% keepFeatTypes]
+    ### for every category type I keep, I have to get rid of servers that don't report that type
+    ###   otherwise I get wierd selection bias issues in the analyses:w
+    if ('plugin' in keepFeatTypes) { mc <- mc[!is.na(plugin_count),] }
+    if ('tag' in keepFeatTypes) { mc <- mc[!is.na(tag_count),] }
+    if ('sign' in keepFeatTypes) { mc <- mc[!is.na(sign_count),] }
+    if ('keyword' in keepFeatTypes) { mc <- mc[!is.na(keyword_count),] }
     #mc <- mc[feat_source != 'keyword']
     #mc <- mc[feat_source=='tag']
     #mc <- mc[feat_source=='plugin']
@@ -136,10 +142,10 @@ makeWideModelTable <- function(mc) {
     ### selection bias dealt with here
     #mc_w <- (mc_w[ (!is.na(keyword_count) | !is.na(tag_count)) & !is.na(sign_count)])
     #mc_w <- (mc_w[!is.na(sign_count)])
-    mc_w[is.na(keyword_count),keyword_count:=0]
-    mc_w[is.na(tag_count),tag_count:=0]
-    mc_w[is.na(plugin_count),plugin_count:=0]
-    mc_w[is.na(sign_count),sign_count:=0]
+    #mc_w[is.na(keyword_count),keyword_count:=0]
+    #mc_w[is.na(tag_count),tag_count:=0]
+    #mc_w[is.na(plugin_count),plugin_count:=0]
+    #mc_w[is.na(sign_count),sign_count:=0]
     #mc_w[is.na(property_count),property_count:=0]
     return(mc_w)
 }

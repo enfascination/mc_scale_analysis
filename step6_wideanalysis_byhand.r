@@ -14,7 +14,8 @@ dim(mc)
 
 mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=max(2, as.integer(n_servers/5000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 
-
+### maybe refresh this occasionally 
+###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugins\ \(X\).csv  data/plugin_codes_byhand.csv 
 plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand.csv")))
 plugin_codes_byhand <- plugin_codes_byhand[1:(nrow(plugin_codes_byhand)-1),]
 #cor(plugin_codes_byhand[4:ncol(plugin_codes_byhand)])
@@ -89,7 +90,7 @@ mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_
                               )
      ### glmnet parameters #, penalty.factor = factor_penalties
      #, nlambda = 30 
-     , dfmax=100
+     , dfmax=10
      #, pmax=20
      #, lamdba=c(0.1, 1, 2,5, 10, 20, 50, 100, 200, 500, 1000)
      #, exclude = factors_exclude
@@ -97,7 +98,9 @@ mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_
 mc_rlm_fit
 coef_nonzero(mc_rlm_fit)
 
+### test of design principles
 ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + tech*srv_max_log + game*srv_max_log + inoutworld*srv_max_log + grief*srv_max_log + estnorm*srv_max_log + loopadmin*srv_max_log,  data=training_full_lasso)
+### test of action situation rule types
 ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + boundary*srv_max_log + position*srv_max_log + poly*srv_max_log + hierarchy*srv_max_log + choice*srv_max_log + grief*srv_max_log + info*srv_max_log + infopath*srv_max_log + chat*srv_max_log + aggregation*srv_max_log + property*srv_max_log + payoff*srv_max_log + scope*srv_max_log + shop*srv_max_log + tech*srv_max_log + game*srv_max_log,  data=training_full_lasso)
 ### do we need humans in the loop in tech-driven governance??  how does that scale? 
 ### loop_admin, srv_max
@@ -107,7 +110,7 @@ ff_pvalue <- 2*pt(abs(summary(ff)$coefficients[,"t value"]), summary(ff)$df[2], 
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + action_admin_up*normpath*srv_max_log ,  data=training_full_lasso))
 ### how do rules and norms interact, and how do those htings interact with scale?
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + infopath*normpath*srv_max_log ,  data=training_full_lasso))
-summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
+summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*normpath*action_admin_up + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
 ff
 ### norm_path, srv_max, scope, info_path
