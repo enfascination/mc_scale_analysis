@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from local_settings import pathData, pathDataInPlugins
-from libmcscrape import cat_mc_json_logs, extract_features_from_mcjson_logs, standardize_address
+from libmcscrape import cat_mc_json_logs, standardize_address
 from shutil import copyfile
 import ujson
 
