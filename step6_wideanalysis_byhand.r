@@ -21,7 +21,7 @@ plugin_codes_byhand <- plugin_codes_byhand[1:(nrow(plugin_codes_byhand)-1),]
 mc <- merge(mc, plugin_codes_byhand, by=c('feat_code'), all.x=T, all.y=F)
 mc_h <- merge(
         mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_todate", "date_ping_int", "plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count" )],
-        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "property", "chat", "apply", "resource")]
+        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "hierarchy", "property", "chat", "apply", "resource")]
         , by="srv_addr", all=T)
 
 ### define predictors
@@ -30,7 +30,7 @@ vars_out <- c('ylog')
 vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "weeks_up_todate", 'jubilees'), c("plugin_count"))
 #vars_in_feat <-  names(mc_h)[which(names(mc_h) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] 
 #vars_in_feat <- c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "estnorm", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", 'loopadmin', 'poly', 'property', 'chat')
-vars_in_feat <- c("tech", "game", "shop", 'property', 'chat', "inoutworld", 'poly', "grief", "isnorm", "normpath", 'loopadmin', "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "apply", "resource")
+vars_in_feat <- c("tech", "game", "shop", 'property', 'chat', "inoutworld", 'poly', "hierarchy", "grief", "isnorm", "normpath", 'loopadmin', "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "apply", "resource")
 interact_xsrv <- as.data.table(mc_h[,vars_in_feat,with=F][,apply(.SD, 2, function(x) x*mc_h$srv_max_log )])
 vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 names(interact_xsrv) <- vars_in_feat_xsrv
@@ -98,18 +98,15 @@ mc_rlm_fit
 coef_nonzero(mc_rlm_fit)
 
 ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + tech*srv_max_log + game*srv_max_log + inoutworld*srv_max_log + grief*srv_max_log + estnorm*srv_max_log + loopadmin*srv_max_log,  data=training_full_lasso)
-ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + boundary*srv_max_log + position*srv_max_log + poly*srv_max_log + choice*srv_max_log + grief*srv_max_log + info*srv_max_log + infopath*srv_max_log + chat*srv_max_log + aggregation*srv_max_log + property*srv_max_log + payoff*srv_max_log + scope*srv_max_log + shop*srv_max_log + tech*srv_max_log + game*srv_max_log,  data=training_full_lasso)
+ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + boundary*srv_max_log + position*srv_max_log + poly*srv_max_log + hierarchy*srv_max_log + choice*srv_max_log + grief*srv_max_log + info*srv_max_log + infopath*srv_max_log + chat*srv_max_log + aggregation*srv_max_log + property*srv_max_log + payoff*srv_max_log + scope*srv_max_log + shop*srv_max_log + tech*srv_max_log + game*srv_max_log,  data=training_full_lasso)
 ### do we need humans in the loop in tech-driven governance??  how does that scale? 
-training_no_institutions <- training_full_lasso[shop==0 & property==0 & inst==0]
 ### loop_admin, srv_max
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*srv_max_log,  data=training_full_lasso))
 ff_pvalue <- 2*pt(abs(summary(ff)$coefficients[,"t value"]), summary(ff)$df[2], lower.tail=FALSE)
-summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*srv_max_log,  data=training_no_institutions))
 ### how do rules and norms interact, and how do those htings interact with scale?
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + action_admin_up*normpath*srv_max_log ,  data=training_full_lasso))
 ### how do rules and norms interact, and how do those htings interact with scale?
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + infopath*normpath*srv_max_log ,  data=training_full_lasso))
-summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + infopath*normpath*srv_max_log ,  data=training_no_institutions))
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
 summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + loopadmin*normpath*action_admin_up + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
 ff
