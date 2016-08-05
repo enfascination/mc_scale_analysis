@@ -102,3 +102,34 @@ plug_properties <- add_copied_feat(plug_properties, missed_plugins, match_plugin
 write.csv(plug_properties, paste0(pathData, 'step45_curse_plugins_metadata_full.csv'))
 ### there are duplicate now on feat_urlname, but not on feat: plug_merge[duplicated(feat_urlname)]
 
+
+
+# #### some early code I used to prepare hand coding of curse plugins automatically
+###### processing
+###mc_feat_select <- mc_rlm_fit$finalModel@penalized[mc_rlm_fit$finalModel@penalized != 0]
+###mc_feat_data <- as.data.table(mc_rlm_fit$trainingData)
+###mc_feat_notableexclude <- names(which(colSums(mc_feat_data[,names(mc_rlm_fit$finalModel@penalized[mc_rlm_fit$finalModel@penalized == 0]),with=F]) > 50))
+###tmpmcp <- names(mc_feat_select)[-1]
+###tmpmcf <- sub("^srvmax_", '', tmpmcp)
+###tmpmcfcursenames <- tmpmcf
+###tmpmcfcursenames[tmpmcfcursenames=='griefprevention'] <- 'grief-prevention'
+###tmpmcfcursenames[tmpmcfcursenames=='enjinminecraftplugin'] <- 'emp'
+###tmpmcfcursenames[tmpmcfcursenames=='permissionsbukkit'] <- 'permbukkit'
+###tmpmcfcursenames[tmpmcfcursenames=='vanishnopacket'] <- 'vanish'
+###setkey(coded_key_keywords, feat)
+###setkey(coded_key_keywords_2, feat)
+###setkey(friv_coded_key_keywords, feat)
+###mc_feat <- data.table(pred=tmpmcp, feat=tmpmcf, beta=as.numeric(mc_feat_select[tmpmcp]), i_srvmax=grepl("^srvmax_", tmpmcp), nobs=colSums(mc_feat_data[,tmpmcf]), friv=tmpmcf %in% friv_coded_key_keywords$feat)
+###tmpcursestring <- system(command=paste0('/Users/sfrey/anaconda/envs/mcscraper/bin/python  ', pathLocal, 'cursemodstats.py'), input=tmpmcf, intern=T )
+###mc_feat_curse <- as.data.table(read.csv(textConnection(tmpcursestring), colClasses=c("character", "character", 'integer', 'character', 'integer'), na.strings='0'))
+###mc_feat <- mc_feat_curse[!duplicated(mc_feat_curse)][mc_feat,on='feat']
+###mc_feat <- cbind(mc_feat, coded_key_keywords[tmpmcf,-1,with=F])
+###mc_feat <- cbind(mc_feat, coded_key_keywords_2[tmpmcf,-1,with=F])
+###write.csv(mc_feat, paste0(pathLocal, "mc_feat.csv"))
+###print(paste0(pathLocal, "mc_feat.csv"))
+###system(paste0('open -a Numbers ', pathLocal, "mc_feat.csv"))
+###
+###### from python function def curseCategoryStats():
+###mod_cats <- c('fixes'= 899, 'economy'= 1058, 'developer-tools'= 674, 'anti-griefing-tools'= 1236, 'world-generators'= 154, 'website-administration'= 196, 'world-editing-and-management'= 731, 'role-playing'= 1766, 'informational'= 2099, 'teleportation'= 1132, 'chat-related'= 2356, 'admin-tools'= 6069, 'miscellaneous'= 870, 'mechanics'= 3867, 'general'= 2612, 'fun'= 6237)
+###
+###
