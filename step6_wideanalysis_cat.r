@@ -44,8 +44,9 @@ vars_in_feat_xsignxsrv <- paste("norms_srvmax", vars_in_feat, sep='_')
 names(interact_xsignxsrv) <- vars_in_feat_xsignxsrv
 mc_p <- cbind(mc_p, interact_xsrv, interact_xsign, interact_xsignxsrv)
 
-mc_split <- splitDataTestTrain(mc_p, proportions=c(0.5, 0.5))
+mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
 training <- mc_split$train
+validate <- mc_split$validate
 testing <- mc_split$test
 
 training_full_lasso <- training
@@ -135,8 +136,8 @@ plot(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, xvar="lambda")
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(mc_rlm_fit$trainingData)[,-which(names(mc_rlm_fit$trainingData)==".outcome")], mc_rlm_fit$trainingData$.outcome)
 2^get_rmse_from_nulllm( lm_fit, training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], training[,vars_out,with=F] )
 
-2^get_rmse_from_caret(mc_rlm_fit, as.matrix(testing[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), testing[,vars_out,with=F])
-2^get_rmse_from_nulllm( lm_fit, testing[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], testing[,vars_out,with=F] )
+2^get_rmse_from_caret(mc_rlm_fit, as.matrix(validate[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), validate[,vars_out,with=F])
+2^get_rmse_from_nulllm( lm_fit, validate[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], validate[,vars_out,with=F] )
 
 rr <- bootstrap(x=training[,vars_out,with=F]$y, nboot=200, theta=function(x, object, xdata){2^get_rmse_from_caret(object, xdata,x)}, object=mc_rlm_fit, xdata=as.matrix(training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]))
 quantile99 <- function(x) {return(quantile(x, c(0.005, 0.995)))}
@@ -151,7 +152,7 @@ mc_glmnet_fit <- cv.glmnet( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat
 )
 coef(mc_glmnet_fit$glmnet_fit, s=mc_glmnet_fit$bestTune$alpha)
 predict(mc_glmnet_fit$glmnet_fit, s=mc_glmnet_fit$bestTune, type="nonzero")
-predict(mc_glmnet_fit$glmnet_fit, newx=testing, s=mc_glmnet_fit$bestTune, type="coefficients")
+predict(mc_glmnet_fit$glmnet_fit, newx=validate, s=mc_glmnet_fit$bestTune, type="coefficients")
 
 ### using penalized packages
 #Anova(mc_rlm_fit$finalModel)
@@ -167,8 +168,8 @@ mc_fittest <- train( x = training_full_lasso[,-which(names(training_full_lasso) 
 plot(mc_fittest$finalModel)
 
 
-pred = predict(mc_rlm_fit , testing)
-RMSE.test = RMSE(obs = testing$srv_max_log , pred = pred)
+pred = predict(mc_rlm_fit , validate)
+RMSE.test = RMSE(obs = validate$srv_max_log , pred = pred)
 
 
 # Example of Stacking algorithms

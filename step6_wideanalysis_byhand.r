@@ -37,14 +37,17 @@ vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 names(interact_xsrv) <- vars_in_feat_xsrv
 mc_h <- cbind(mc_h, interact_xsrv)
 
-mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.5))
-training <- mc_split$train
+mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
+train <- mc_split$train
+validate <- mc_split$validate
 testing <- mc_split$test
+#training_full_lasso <- rbind(training, mc_split$validate)
+training_full_lasso <- train
 
-training_full_lasso <- training
+summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
 #training_full_lasso <- training_full_lasso[!is.na(ylog)]
-#setnames(training_full_lasso, (ncol(training)+1):ncol(training_full_lasso), paste("srvmax", names(training_full_lasso[,(ncol(training)+1):ncol(training_full_lasso), with=F]) , sep='_'))
-#training <- training[!is.na(ylog)]
+#setnames(training_full_lasso, (ncol(train)+1):ncol(training_full_lasso), paste("srvmax", names(training_full_lasso[,(ncol(train)+1):ncol(training_full_lasso), with=F]) , sep='_'))
+#train <- train[!is.na(ylog)]
 #factor_counts <- colSums(training_full_lasso[,vars_in_feat,with=F]) + 0.00001
 #factor_penalties <- c(rep(1, length(vars_in_nonfeat)), 1+feat_count_min/factor_counts, 1+feat_count_min/factor_counts )
 mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F])#[,1:300, with=F])
@@ -135,15 +138,15 @@ predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="nonzero")
 predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="coefficients")
 plot(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, xvar="lambda")
 
-2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training[,vars_out,with=F])
+2^get_rmse_from_caret(mc_rlm_fit, as.matrix(train[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), train[,vars_out,with=F])
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training_full_lasso$y)
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(mc_rlm_fit$trainingData)[,-which(names(mc_rlm_fit$trainingData)==".outcome")], mc_rlm_fit$trainingData$.outcome)
-2^get_rmse_from_nulllm( lm_fit, training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], training[,vars_out,with=F] )
+2^get_rmse_from_nulllm( lm_fit, train[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], train[,vars_out,with=F] )
 
-2^get_rmse_from_caret(mc_rlm_fit, as.matrix(testing[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), testing[,vars_out,with=F])
-2^get_rmse_from_nulllm( lm_fit, testing[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], testing[,vars_out,with=F] )
+2^get_rmse_from_caret(mc_rlm_fit, as.matrix(validate[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), validate[,vars_out,with=F])
+2^get_rmse_from_nulllm( lm_fit, validate[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F], validate[,vars_out,with=F] )
 
-rr <- bootstrap(x=training[,vars_out,with=F]$y, nboot=200, theta=function(x, object, xdata){2^get_rmse_from_caret(object, xdata,x)}, object=mc_rlm_fit, xdata=as.matrix(training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]))
+rr <- bootstrap(x=train[,vars_out,with=F]$y, nboot=200, theta=function(x, object, xdata){2^get_rmse_from_caret(object, xdata,x)}, object=mc_rlm_fit, xdata=as.matrix(train[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]))
 quantile99 <- function(x) {return(quantile(x, c(0.005, 0.995)))}
 quantile99(rr$thetastar)
 STOP
@@ -156,7 +159,7 @@ mc_glmnet_fit <- cv.glmnet( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat
 )
 coef(mc_glmnet_fit$glmnet_fit, s=mc_glmnet_fit$bestTune$alpha)
 predict(mc_glmnet_fit$glmnet_fit, s=mc_glmnet_fit$bestTune, type="nonzero")
-predict(mc_glmnet_fit$glmnet_fit, newx=testing, s=mc_glmnet_fit$bestTune, type="coefficients")
+predict(mc_glmnet_fit$glmnet_fit, newx=validate, s=mc_glmnet_fit$bestTune, type="coefficients")
 
 ### using penalized packages
 #Anova(mc_rlm_fit$finalModel)
@@ -172,15 +175,15 @@ mc_fittest <- train( x = training_full_lasso[,-which(names(training_full_lasso) 
 plot(mc_fittest$finalModel)
 
 
-pred = predict(mc_rlm_fit , testing)
-RMSE.test = RMSE(obs = testing$srv_max_log , pred = pred)
+pred = predict(mc_rlm_fit , validate)
+RMSE.test = RMSE(obs = validate$srv_max_log , pred = pred)
 
 
 # Example of Stacking algorithms
 # create submodels
 control <- trainControl(method="repeatedcv", number=1, repeats=1, savePredictions=TRUE)
 algorithmList <- c( 'lm', 'rlm', 'enet', 'glmnet', 'penalized', 'lasso', "C5.0", 'svmRadial', 'pls')
-models <- caretList(srv_max_log~., data=training[1:5000], trControl=control, methodList=algorithmList, preProc = c("zv", "nzv"))
+models <- caretList(srv_max_log~., data=train[1:5000], trControl=control, methodList=algorithmList, preProc = c("zv", "nzv"))
 results <- resamples(models)
 summary(results)
 dotplot(results)

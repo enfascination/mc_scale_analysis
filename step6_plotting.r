@@ -18,6 +18,9 @@ mc_sub[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_r
 expect_true(mc_sub[,length(unique(srv_addr))] == mc_sub[,length(unique(srv_addr)), by=dataset_source][,sum(V1)])
 c(dim(mc_sub[,.N,by=srv_addr]) , dim(mc_sub[srv_repstat==T,.N,by=srv_addr]) , dim(mc_sub[srv_repquery==T,.N,by=srv_addr]) , dim(mc_sub[srv_repplug==T,.N,by=srv_addr]) , dim(mc_sub[srv_repsample==T,.N,by=srv_addr]), dim(mc_sub[srv_repsniff==T,.N,by=srv_addr]) , dim(mc_sub[srv_reptopic==T,.N,by=srv_addr]))
 
+mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
+mc_sub <- mc_split$train
+validate <- mc_split$validate
 
 summary(lm(srv_max ~ srv_details + strategy + norm + rule + nodiscretion + economy + action_other_up + action_other_down + action_admin + boundary + communication, mc_sub))
 summary(lm(nvisitsunobs ~ srv_details + srv_max*strategy + srv_max*norm + srv_max*rule + srv_max*nodiscretion + srv_max*economy + srv_max*action_other_up + srv_max*action_other_down + srv_max*action_admin + srv_max*boundary + srv_max*communication, mc_sub))
