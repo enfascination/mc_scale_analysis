@@ -199,7 +199,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 if 'country code' in mc: 
                     del mc['country code']
                 ### if I didn't get one by other means, use geoip
-                if 'country_code' not in mc:
+                if 'country_code' not in mc or not mc['country_code']:
                     sIP = ''
                     sIPmatch = re.compile("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}") ### http://www.regular-expressions.info/examples.html
                     if 'ip' in mc and sIPmatch.match(mc['ip']):
@@ -210,6 +210,9 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                                 sIP = mc['iffy']['server_ip_candidates'][i]
                                 break
                     if sIP and geoip.country_code_by_addr(sIP): mc['country_code'] = geoip.country_code_by_addr(sIP)
+                ### fallback
+                if 'country_code' not in mc or not mc['country_code']:
+                    mc['country_code'] = 'NA'
                 #
                 ### start wrting to file
                 if mc['dataset_source'] in ('omni', 'mcs_org', 'reddit'):  
