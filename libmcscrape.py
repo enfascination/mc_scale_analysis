@@ -113,7 +113,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
     with open(s_infile, 'r') as infile:
         with open(s_outfile, 'w') as outfile:
             mcdata_csv = csv.writer(outfile, delimiter='\t')
-            header_csv = ("post_uid", "date_post", "srv_addr", "srv_v", "srv_max", "srv_details", 'feat', 'feat_code', 'feat_type', 'feat_source', 'feat_trust', "srv_repstat", "srv_repquery", "srv_repplug", "srv_repsample", "srv_repsniff", "dataset_source")
+            header_csv = ("post_uid", "date_post", "srv_addr", "srv_v", "srv_max", "srv_details", 'feat', 'feat_code', 'feat_type', 'feat_source', 'feat_trust', "srv_repstat", "srv_repquery", "srv_repplug", "srv_repsample", "srv_repsniff", "dataset_source", "srv_votes")
             row_edit_trigger = len(header_csv)### I'll be using this to make sure I always update my headers with my csv entries
             mcdata_csv.writerow(header_csv) #, "srv_repsample" ))
             for mcline in infile: 
@@ -213,6 +213,8 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                 ### fallback
                 if 'country_code' not in mc or not mc['country_code']:
                     mc['country_code'] = 'NA'
+                ###  votes
+                srv_vote = mc['votes'] if mc['dataset_source'] == 'mcs_org' else 'NA'  
                 #
                 ### start wrting to file
                 if mc['dataset_source'] in ('omni', 'mcs_org', 'reddit'):  
@@ -220,13 +222,13 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                     if (srv_details >= 3):
                         ### write plugin feature rows
                         for t in mc['plugins_names']: 
-                            row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'plugin_'+t.lower(), '', 'plugin', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
+                            row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'plugin_'+t.lower(), '', 'plugin', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'], srv_vote)
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
                             mcdata_csv.writerow(row_csv)
                         ### write server property feature rows
                         if 'server_property_names' in mc and mc['server_property_names']: 
                             for t in mc['server_property_names']: 
-                                row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'property_'+t.lower(), '', 'property', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
+                                row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'property_'+t.lower(), '', 'property', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'], srv_vote)
                                 if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASDDGGD: update your headers")
                                 mcdata_csv.writerow(row_csv)
                     if mc['dataset_source'] in ('mcs_org', 'reddit'):  ### not ideal way to handle reddit speific metadata.  better to refactor and make a redi specific function, but oh well
@@ -243,7 +245,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                         mc_tags.extend(mc.get('secondary_tags', []))
                         for t in mc_tags:
                             mc_tag = str(t.encode('ascii','ignore')).lower().strip()
-                            row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), mc_tag, 'tag_'+mc_tag, u'', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'])
+                            row_csv = (mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), mc_tag, 'tag_'+mc_tag, u'', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source'], srv_vote)
                             if len(row_csv) != row_edit_trigger: raise NotImplementedError("PROBLEM GGSHJJJRRRJASD: update your headers")
                             mcdata_csv.writerow(row_csv)
                         mc_text = re.sub(r'[^a-zA-Z0-9=]', ' ', mc['selftext'].lower())
@@ -251,7 +253,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                         for t in juicy_word_beginnings:
                             #if re.search(r'\b'+t+r'\b', mc_text):
                             if re.search(r'\b'+t, mc_text):
-                                mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'keyword_'+t.lower(), u'', 'keyword', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                                mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), 'keyword_'+t.lower(), u'', 'keyword', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']), srv_vote)
                     ### write sign feature rows, and, redundanlty, keywords in the signs
                     if mc['reported_sniff']:
                         if 'text_short' in mc:# and type(mc['text_short']) == type({}):
@@ -260,7 +262,7 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                                     feat_type = 'sign'
                                     text_short = ' '.join(text_short)
                                     for i in range(mc['snf_signs_count']):
-                                        mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), feat_type, feat_type+'_'+feat_type, u'', feat_type, 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                                        mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), feat_type, feat_type+'_'+feat_type, u'', feat_type, 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']), srv_vote)
                                 else: 
                                     feat_type = 'keyword'
                                 ### wierd edge case i now filter earlier in the pipeline, so if I see this I can delete it
@@ -273,17 +275,24 @@ def extract_features_from_mcjson_logs(s_infile, s_outfile):
                                 for t in juicy_word_beginnings:
                                     #if re.search(r'\b'+t+r'\b', mc_text):
                                     if re.search(r'\b'+t, mc_text):
-                                        mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t, feat_type+'_'+t, u'', feat_type, 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                                        mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t, feat_type+'_'+t, u'', feat_type, 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']), srv_vote)
                         ### I got rid of this by getting rid of all its parts
                         ### if mc['dataset_source'] == 'reddit':
                             #for t in mc['secondary_tags']: 
-                                #mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), u'', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                                #mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), u'', 'tag', 1, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']), srv_vote)
                             ### this attempted to pull plugin names fromteh description text to supplmment missing plugin info elsewhere.  that's to ugly for me now
                             ### if (srv_details >= 3):
                                 ### for k in keyword_keys:
                                     ### key_trust = 0 if k != 'plugins_voip' else 1
                                     ### for t in mc['iffy'][k]: 
-                                        ### mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), k, 'plugin', key_trust, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']))
+                                        ### mcdata_csv.writerow((mc['post_uid'], mc['dataset_date'], mc['mc_addr'], srv_ver, int(mc['players_max']), int(srv_details), t.lower(), k, 'plugin', key_trust, mc['reported_status'], mc['reported_query'], mc['reported_plugins'], mc.get('reported_sample',u'NA'), mc['reported_sniff'], mc['dataset_source']), srv_vote)
                 else: 
                     print("BIG PROBLEM DAFDSAJFDAJSDF")
             pprint(server_inventory)
+
+def get_data_dates(date_file):
+    dataset_dates = [f.strip() for f in open(date_file,'r').readlines()]
+    return(dataset_dates)
+
+def get_freshest_data_date(date_file):
+    return(get_data_dates(date_file)[-1])
