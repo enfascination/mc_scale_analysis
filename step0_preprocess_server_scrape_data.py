@@ -1,10 +1,11 @@
-from local_settings import pathDataInPlayers, pathDataOut
-from libmcscrape import load_dirty_json, standardize_address
+from local_settings import pathDataOut
+from libmcscrape import load_dirty_json, standardize_address, get_freshest_data_date
 import csv
 import gzip
 import hashlib
 
-pathScrapeDataIn = pathDataInPlayers + "dump_players_online.json.gz"
+players_dataset_date = get_freshest_data_date("lib_datasets_players.txt")
+pathScrapeDataIn = '/Users/sfrey/projecto_staid/minecraft/' + players_dataset_date + '/' + "dump_players_online.json.gz"
 #pathPlayerDataOut = "/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/data/player_visits.csv"
 #pathServerDataOut = "/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/data/server_visits.csv"
 pathServerDataOut = pathDataOut + "step0_server_visits.csv"
