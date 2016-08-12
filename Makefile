@@ -7,8 +7,8 @@ RCMD := R --interactive
 #model: model.Rout
 #paper: plot.Rout paper.pdf
 all: prep
-prep: prepscrapes prepposts prepmerge 
-dev: prepmerge analysis
+prep: prepscrapes prepposts prepmerge prepanalysis
+dev: prepmerge prepanalysis analysis
 
 
 prepscrapes:
@@ -29,6 +29,9 @@ prepmerge:
 	time python step4_prep_topic_analysis.py
 	time R -f step45_merge_plugins.r
 	time R -f step5_merge_scrapes.r
+
+prepanalysis:
+	time R -f step55_analysis_prep.R 
 
 analysis:
 	time R -f step6_plotting.r
