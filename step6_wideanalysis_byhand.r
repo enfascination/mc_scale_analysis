@@ -21,14 +21,14 @@ plugin_codes_byhand <- plugin_codes_byhand[1:(nrow(plugin_codes_byhand)-1),]
 #cor(plugin_codes_byhand[4:ncol(plugin_codes_byhand)])
 mc <- merge(mc, plugin_codes_byhand, by=c('feat_code'), all.x=T, all.y=F)
 mc_h <- merge(
-        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_todate", "date_ping_int", "plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count" )],
+        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count" )],
         mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "hierarchy", "property", "chat", "apply", "resource")]
         , by="srv_addr", all=T)
 
 ### define predictors
-vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "srv_repquery", "srv_repplug", "srv_repsample", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "keyword_count", "tag_count", "sign_count"), c("action_admin_up", "action_other_down", "inst", "forbid", 'y'))
+vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "srv_max_bak", "srv_repquery", "srv_repplug", "srv_repsample", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "keyword_count", "tag_count", "sign_count"), c("action_admin_up", "action_other_down", "inst", "forbid", 'y'))
 vars_out <- c('ylog')
-vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "weeks_up_todate", 'jubilees'), c("plugin_count"))
+vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "date_ping_1st", "date_ping_lst", "weeks_up_total", "weeks_up_todate", 'jubilees'), c("plugin_count"))
 #vars_in_feat <-  names(mc_h)[which(names(mc_h) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] 
 #vars_in_feat <- c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "estnorm", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", 'loopadmin', 'poly', 'property', 'chat')
 vars_in_feat <- c("tech", "game", "shop", 'property', 'chat', "inoutworld", 'poly', "hierarchy", "grief", "isnorm", "normpath", 'loopadmin', "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "apply", "resource")
@@ -44,7 +44,37 @@ testing <- mc_split$test
 #training_full_lasso <- rbind(training, mc_split$validate)
 training_full_lasso <- train
 
-summary(ff <- rlm(y ~ weeks_up_todate + date_ping_int + plugin_count + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log ,  data=training_full_lasso))
+
+(fff <- rlm(srv_max_log ~ weeks_up_todate + date_ping_int + jubilees + log10(plugin_count+1) + dataset_reddit + dataset_mcs_org + tech + poly + hierarchy + chat + inoutworld + shop + property + normpath,  data=training_full_lasso))
+(ff <- rlm(y ~ srv_max_log + I(srv_max_log^2) + srv_max_log*weeks_up_todate + srv_max_log*date_ping_int + jubilees + srv_max_log*log10(plugin_count+1) + srv_max_log*dataset_reddit + srv_max_log*dataset_mcs_org + tech*srv_max_log + poly*srv_max_log + hierarchy*srv_max_log + chat*srv_max_log + inoutworld*srv_max_log + shop*srv_max_log + property*srv_max_log + normpath*srv_max_log,  data=training_full_lasso))
+(ffff <- rlm(weeks_up_total ~ srv_max_log  + I(srv_max_log^2) + date_ping_int + jubilees + log10(plugin_count) + dataset_reddit + dataset_mcs_org,  data=training_full_lasso[(max(ymd(train$date_ping_lst)) - ymd((train$date_ping_lst))) <= 31]))
+(ffvotes <- rlm(weeks_up_total ~ srv_max_log  + I(srv_max_log^2) + date_ping_int + jubilees + log10(plugin_count) + dataset_reddit + dataset_mcs_org,  data=training_full_lasso[(max(ymd(train$date_ping_lst)) - ymd((train$date_ping_lst))) <= 31]))
+asdt(tidy(ff))[abs(statistic)>=2]
+asdt(tidy(fff))[abs(statistic)>=2]
+asdt(tidy(ffff))[abs(statistic)>=2]
+splom(~training_full_lasso[,.( srv_max_log, weeks_up_todate, date_ping_int, jubilees, plugin_count, dataset_reddit, dataset_mcs_org, tech, hierarchy, chat, inoutworld, shop, property, normpath)])
+#cor(training_full_lasso[,.( action_admin_up ,normpath  ,infopath,srv_max_log)])
+ggplot(data=training_full_lasso, aes(y=y, color=action_admin_up, x=srv_max)) + geom_point() + geom_jitter() + scale_x_log10() + scale_y_log10()
+ggplot(data=training_full_lasso[(max(ymd(train$date_ping_lst)) - ymd((train$date_ping_lst))) <= 31], aes(y=weeks_up_total, color=plugin_count, x=srv_max)) + geom_point() + geom_jitter() + scale_x_log10()
+ggplot(data=training_full_lasso[(max(ymd(train$date_ping_lst)) - ymd((train$date_ping_lst))) <= 31], aes(y=weeks_up_total, color=plugin_count, x=srv_max_log)) + geom_point() + geom_jitter()  + geom_line(data=data.frame(x=log10(1:1000), y=((9.54)+1.94*log10(1:1000)+-0.26*log10(1:1000)^2)),aes(x=x, y=y, color=NULL))  + scale_y_continuous(limits=c(0,60))
+#cbind(term=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + action_admin_up*srv_max_log  + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log + srv_max_log*action_admin_up*loopadmin + srv_max_log*action_admin_up*normpath + srv_max_log*action_admin_up*infopath,  data=training_full_lasso[]))[,c("term", "statistic")]
+        #, signif(cbind(statistic=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log + srv_max_log*action_admin_up*loopadmin + srv_max_log*action_admin_up*normpath + srv_max_log*action_admin_up*infopath,  data=training_full_lasso[]))[,c("statistic")]
+        #,  stat2=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log + srv_max_log*action_admin_up*loopadmin + srv_max_log*action_admin_up*normpath + srv_max_log*action_admin_up*infopath,  data=training_full_lasso[y<=200]))[,c("statistic")]
+        #, lmstat=tidy(ff <- lm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log + srv_max_log*action_admin_up*loopadmin + srv_max_log*action_admin_up*normpath + srv_max_log*action_admin_up*infopath,  data=training_full_lasso[]))[,c( "statistic")]
+        #,  lmstat2=tidy(ff <- lm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + action_admin_up*srv_max_log + loopadmin*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log  + srv_max_log*action_admin_up*loopadmin + srv_max_log*action_admin_up*normpath + srv_max_log*action_admin_up*infopath,  data=training_full_lasso[y<=200]))[,c("statistic")] 
+                     #),2)
+      #)
+
+#cbind(term=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log + normpath*srv_max_log  + infopath*srv_max_log,  data=training_full_lasso[]))[,c("term", "statistic")]
+        #, signif(cbind(statistic=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log +  normpath*srv_max_log  + infopath*srv_max_log,  data=training_full_lasso[]))[,c("statistic")]
+        #,  stat2=tidy(ff <- rlm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log +  normpath*srv_max_log  + infopath*srv_max_log,  data=training_full_lasso[y<=200]))[,c("statistic")]
+        #, lmstat=tidy(ff <- lm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log +  normpath*srv_max_log  + infopath*srv_max_log,  data=training_full_lasso[]))[,c( "statistic")]
+        #,  lmstat2=tidy(ff <- lm(y ~ weeks_up_todate + date_ping_int + jubilees + plugin_count + srv_max_log + resource*srv_max_log + shop*srv_max_log + property*srv_max_log +  normpath*srv_max_log  + infopath*srv_max_log,  data=training_full_lasso[y<=200]))[,c("statistic")] 
+                     #),2)
+      #)
+
+
+
 #training_full_lasso <- training_full_lasso[!is.na(ylog)]
 #setnames(training_full_lasso, (ncol(train)+1):ncol(training_full_lasso), paste("srvmax", names(training_full_lasso[,(ncol(train)+1):ncol(training_full_lasso), with=F]) , sep='_'))
 #train <- train[!is.na(ylog)]
