@@ -2,7 +2,6 @@ pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/
 source(paste0(pathLocal,"local_settings.R"))
 source(paste0(pathLocal,"libs_mc_scrape.R"))
 
-library(data.table)
 library(lazyeval)
 library(lubridate)
 

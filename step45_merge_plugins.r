@@ -6,6 +6,7 @@ source(paste0(pathLocal,"header_redditscrape.r"))
 source(paste0(pathLocal,"plugin_classes.r"))
 library(stringr)
 library(assertthat)
+library(testthat)
 
 
 plug <- fread(paste0(pathData, 'curse_plugins_metadata.csv'))
