@@ -24,7 +24,7 @@ def prep_topic_analysis(pathDataIn, pathDataOut, data_source_tag, onlyUnique=Tru
                                 mc.get('post_uid', visit)
                                 , visit
                                 , data_source_tag
-                                , (mc['title']+' '+mc['selftext']).encode("UTF-8").replace('\n', ' ').replace('"', "'").replace('[[', ' ').replace(']]', ' ').replace('**', ' ').replace('[', ' ').replace(']', ' ').replace('*', ' ').replace('.', ' ').replace('/', ' ').replace('', '').replace('!', " ").replace('(', " ").replace(')', " ").replace(':', ' ')]) #, "srv_repsample" ))
+                                , (mc['title']+' '+mc['selftext']).replace('\n', ' ').replace('"', "'").replace('[[', ' ').replace(']]', ' ').replace('**', ' ').replace('[', ' ').replace(']', ' ').replace('*', ' ').replace('.', ' ').replace('/', ' ').replace('', '').replace('!', " ").replace('(', " ").replace(')', " ").replace(':', ' ')]) #, "srv_repsample" ))
                         except UnicodeEncodeError:
                             pprint(mc)
                             raise
