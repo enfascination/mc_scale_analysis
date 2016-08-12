@@ -28,10 +28,8 @@ registerDoMC(cores = 8)
 library(rms)
 library(broom)
 
-pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
-
 ### functions before data prep
-buildFeatureTablePickDependent <- function(spings, splugins, dependent='ncomm4visits') {
+buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, dependent='ncomm4visits') {
     
     ### Pick Variable
     ### to do it, I have to create a one-row-per-server table 
@@ -65,12 +63,13 @@ buildFeatureTablePickDependent <- function(spings, splugins, dependent='ncomm4vi
     sfeat <- merge(sfeat, pluginstats[build=='curse', list(feat, feat_source_coded = feat_source, feat_url = url, date_created, date_updated, dls_total, dls_recent, likes, cat_admintools, cat_antigrief, cat_chat, cat_devtools, cat_economy, cat_fixes, cat_fun, cat_general, cat_informational, cat_mechanics, cat_misc, cat_roleplay, cat_teleportation, cat_webadmin, cat_world, cat_worldgen)], all.x=T, all.y=F, by=c('feat'))
     ### QC
     expect_true(sfeat[,length(unique(srv_addr))] == sfeat[,length(unique(srv_addr)), by=dataset_source][,sum(V1)])  ### CAREFUL!!!  the same IPs came from a few different data sources.  argg.
-    expect_true(sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source][2,V5] == 0)
+    #expect_true(sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source][2,V5] == 0)
     expect_true(sfeat[,length(unique(srv_addr))] == sfeat[,length(unique(post_uid))])
 
     ### Pre-widening Enrichment and Cleaning
     sfeat[,feat_count:=.N,by="feat_code"]
     sfeat[srv_max>0,srv_max_log:=log10(srv_max)]
+    sfeat[,log_plugin_count:=log10(plugin_count+1)]
     #spings <- spings[dataset_source=='reddit']
     #sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
     #sfeat[,dataset_source:=as.numeric(factor(dataset_source))]
@@ -131,10 +130,11 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
 }
 
 ### Widening
-makeWideModelTable <- function(mc) {
+makeWideModelTable <- function(mc, server_level_vars) {
     mc[,xxx:=999] ### this is bs I don't want to have to deal with.  keeps an error from getting thrwon and wierd spuriousnesses from being hard to catch.
     #id_vars <- c("post_uid", "srv_addr")  ### these names should be the same as in the forumla below, and be updated all the time with every change, or exle everything will be badness and bad
-    mc_w <- as.data.table(dcast(formula=post_uid + srv_addr + srv_max + srv_max_log + dataset_reddit + dataset_omni + dataset_mcs_org + jubilees + y + ylog + srv_repquery + srv_repplug + srv_repsample + weeks_up_todate + date_ping_int + plugin_count + keyword_count + tag_count + sign_count ~ feat_code, data=mc, value.var="xxx", fun.aggregate = function(x) (length(x) > 0) + 0.0))
+    mc_formula = as.formula( paste(paste0(server_level_vars, collapse=' + '), "feat_code", sep=' ~ ') )
+    mc_w <- as.data.table(dcast(formula=mc_formula, data=mc, value.var="xxx", fun.aggregate = function(x) (length(x) > 0) + 0.0))
     #mc_w <- mc_w[,(c(id_vars, pred_vars, names(which(colSums(mc_w[,-(which(names(mc_w) %in% c(id_vars, pred_vars))), with=F]) > 2)))), with=F] ### get rid of features that occur only once  ### there are wierd interactions here with the nzv filtering below.  lower threshold (currently 5) raises the freqCut ratio and counterintuitively increases the number of columns that get censored out
     mc[,xxx:=NULL] 
     #
@@ -177,9 +177,18 @@ splitDataTestTrain <- function(data, proportions=c(0.6, 0.4), validation_set=FAL
     return(tt)
 }
 
+get_plugin_codes <- function() {
+    ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugins\ \(X\).csv  data/plugin_codes_byhand.csv 
+    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand.csv")))
+    plugin_codes_byhand <- plugin_codes_byhand[1:(nrow(plugin_codes_byhand)-1),]
+    return(plugin_codes_byhand )
+}
+
 ### after data prep
 coef_nonzero <- function(mc_rlm_fit) {
-    data.frame(feat=coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@Dimnames[[1]][coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@i+1], beta=format( (coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@x), scientific=FALSE) )
+    gg <- data.frame(feat=as.character(as.character(coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@Dimnames[[1]][coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@i+1])), beta=as.numeric(format( (coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)@x), scientific=FALSE)) )
+    gg$feat <- as.character(gg$feat)
+    return(gg)
 }
 get_rmse_from_nulllm <- function(fit, xdata, y) {
     comp <- cbind(predict(fit, newdata=xdata), y )
@@ -248,4 +257,36 @@ logLik_glmnet <- function(model, y) {
     dev_ratio <- tail(model$dev_ratio,1)
     dev_ratio <- 1 - dev_model/dev_null
     return(ll_model)
+}
+
+coef_codable <- function(mc_caret_fit) {
+    coefs <- list()
+    coefs$basic <- list()
+    coefs$xsrv <- list()
+    restring_feat <- "^(?:plugin|tag|keyword|property)_"
+    restring_xsrv <- "^srvmax_"
+    fit_results <- asdt(coef_nonzero( mc_caret_fit ))
+    fit_results[,feat_trunc:={
+        feat_trunc=sub(restring_xsrv, '', as.character(feat)); 
+        feat_trunc }
+    ]
+    fit_results[,feat_raw:={
+        feat_raw=sub(restring_feat, '', feat_trunc); 
+        feat_raw }
+    ]
+    basic_cols <- grep(restring_feat, fit_results$feat, value=TRUE)
+    xsrv_cols  <- paste( "srvmax", grep( restring_feat, sub( restring_xsrv , '' , fit_results$feat[ grep( restring_xsrv, fit_results$feat) ] ) , value=TRUE) , sep='_') ### get rid of first prefix vefore searchingfor secondone
+    bookkeeping_cols <- fit_results$feat[fit_results$feat %ni% c(basic_cols, xsrv_cols)]
+    expect_equal(nrow(fit_results), length(c(basic_cols, xsrv_cols, bookkeeping_cols)))
+    positive_colnums <- which(fit_results$beta > 0)
+    negative_colnums <- which(fit_results$beta < 0)
+    positive_cols <- fit_results[beta > 0, feat]
+    negative_cols <- fit_results[beta < 0, feat]
+    coefs$basic$positive <- fit_results[feat %in% intersect(basic_cols,positive_cols),feat_trunc]
+    coefs$basic$negative <- fit_results[feat %in% intersect(basic_cols,negative_cols),feat_trunc]
+    coefs$xsrv$positive  <- fit_results[feat %in% intersect(xsrv_cols,positive_cols),feat_trunc]
+    coefs$xsrv$negative  <- fit_results[feat %in% intersect(xsrv_cols,negative_cols),feat_trunc]
+    coefs$all <- c(coefs$basic$positive, coefs$xsrv$positive, coefs$basic$negative, coefs$xsrv$negative)
+    expect_equal( sum(sapply(coefs$all, length)) + length(bookkeeping_cols), length(fit_results$feat) )
+    return(coefs)
 }

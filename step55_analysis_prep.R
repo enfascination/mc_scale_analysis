@@ -6,9 +6,10 @@ source(paste0(pathLocal,"plugin_classes.r"))
 ### Load Data
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
 splugins <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
+pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
 
 
-sfeat <- buildFeatureTablePickDependent(spings, splugins, dependent='ncomm4visits')
+sfeat <- buildFeatureTablePickDependent(spings, splugins, pluginstats, dependent='ncomm4visits')
 
 ### ### this is a function for getting a template to hand code most popular plugins
 writeBlankFeatureCodingTable <- function(mc, filename, featureCountMin) {

@@ -3,6 +3,8 @@ pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/
 source(paste0(pathLocal,"local_settings.R"))
 source(paste0(pathLocal,"lib_step6_analysis.r"))
 
+library(covTest)
+
 ### notes:
 ###  if there is lots of data 50/50 training/test is fine, and you shouldn't calculate full lasso paths (dfmax=50 or 100) and it's important to filter columns down before widening the matrix.  
 
@@ -13,25 +15,29 @@ dim(mc)
 ### filtering for analysis
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 feat_count_min <- max(2, as.integer(n_servers/5000))
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'tag', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
-n_servers <- mc[,length(unique(srv_addr))]; n_servers 
+mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+nsrv <- mc[,length(unique(srv_addr))]; nsrv 
 dim(mc)
 
-mc_w <- makeWideModelTable(mc)
-dim(mc_w)
 
 ### define predictors
-vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "keyword_count", "tag_count", 'y'))
+vars_non_model <- c(c("post_uid", "srv_addr", "srv_max", "srv_max_bak", "srv_repquery", "srv_repplug", "srv_repsample", "dataset_omni", "keyword_count", "tag_count", "sign_count", "date_ping_1st", "date_ping_lst", "weeks_up_total", "srv_votes", "y"))
+vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", 'jubilees'), c("dataset_reddit", "dataset_mcs_org"))
 vars_out <- c('ylog')
-vars_in_nonfeat <- c(c("srv_max_log", "srv_repquery", "srv_repplug", "srv_repsample", "date_ping_int", "weeks_up_todate"), c("plugin_count", "sign_count"))
-vars_in_feat <-  names(mc_w)[which(names(mc_w) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] ### added jubiliees (implicitly here) because I want to se interactions
+vars_in_feat_special <- c("log_plugin_count", "weeks_up_todate") ### these should be added explicitly, not implicitly
+vars_server_level <- c(vars_non_model, vars_out, vars_in_nonfeat, vars_in_feat_special)
+
+mc_w <- makeWideModelTable(mc, vars_server_level)
+expect_equal(nrow(mc_w), nsrv) ### otherwise, vars_server_level has too many variables (and some variables that vary within server)
+
+vars_in_feat <-  c(vars_in_feat_special, names(mc_w)[which(names(mc_w) %ni% vars_server_level)])
 mc_interactions <- as.data.table(mc_w[,vars_in_feat,with=F][,apply(.SD, 2, function(x) x*mc_w$srv_max_log )])
 vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 names(mc_interactions) <- vars_in_feat_xsrv
 mc_w <- cbind(mc_w, mc_interactions)
 dim(mc_w)
 
-mc_split <- splitDataTestTrain(mc_h, proportions=c(0.4, 0.3, 0.3), validation_set=TRUE)
+mc_split <- splitDataTestTrain(mc_w, proportions=c(0.4, 0.3, 0.3), validation_set=TRUE)
 training <- mc_split$train
 validate <- mc_split$validate
 testing <- mc_split$test
@@ -86,32 +92,27 @@ mc_rlm_fit <- train( x = as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_
      ### glmnet parameters
      , penalty.factor = factor_penalties
      #, nlambda = 30 
-     , dfmax=100
+     , dfmax=200
      #, pmax=20
      #, lamdba=c(0.1, 1, 2,5, 10, 20, 50, 100, 200, 500, 1000)
      #, exclude = factors_exclude
 )
 mc_rlm_fit
+coef_nonzero(mc_rlm_fit)
+
+### merge with plugin codes
+coefs <- coef_codable(mc_rlm_fit)
+plugin_codes <- get_plugin_codes()
+coefs$all[coefs$all %ni% plugin_codes$feat_code]
+plugin_codes[feat_code %in% coefs$basic$positive, colSums(.SD[,4:ncol(.SD),with=F])] - plugin_codes[feat_code %in% coefs$basic$negative, colSums(.SD[,4:ncol(.SD),with=F])]
+plugin_codes[feat_code %in% coefs$xsrv$positive, colSums(.SD[,4:ncol(.SD),with=F])] - plugin_codes[feat_code %in% coefs$xsrv$negative, colSums(.SD[,4:ncol(.SD),with=F])]
 
 (mc_rlm_fit$finalModel$df)
 lm_fit <- lm(training_full_lasso$y~1)
 deviance(lm_fit)
 logLik(lm_fit)
-logLik_glmnet <- function(model, y) {
-    lm_fit <- lm(y~1)
-    dev_null <- deviance(lm_fit)
-    ll_null <- logLik(lm_fit)
-    ll_sat <- 0.5*dev_null + ll_null
-    dev_model <- tail(deviance(model),1)
-    ll_model <- 0.5*(-dev_model+dev_null) + ll_null
-    ll_model <- -0.5*dev_model + ll_sat
-    dev_ratio <- tail(model$dev_ratio,1)
-    dev_ratio <- 1 - dev_model/dev_null
-    return(ll_model)
-}
 logLik_glmnet(mc_rlm_fit$finalModel, training_full_lasso$y)
 deviance(mc_rlm_fit$finalModel)
-mc_rlm_fit
 glance(mc_rlm_fit$finalModel)
 coef_nonzero(mc_rlm_fit)
 coef(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$alpha)
@@ -123,27 +124,7 @@ dim(training_full_lasso)
 predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="nonzero")
 predict(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, type="coefficients")
 plot(mc_rlm_fit$finalModel, s=mc_rlm_fit$bestTune$lambda, xvar="lambda")
-get_rmse_from_nulllm <- function(fit, xdata, y) {
-    comp <- cbind(predict(fit, newdata=xdata), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])^2))^0.5
-}
-get_rme_from_nulllm <- function(fit, xdata, y) {
-    comp <- cbind(predict(fit, newdata=xdata), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])))
-}
-get_rmse_from_caret <- function(object, xdata, y) {
-    #print(class(y))
-    #print(class(object))
-    #print(class(xdata))
-    comp <- cbind(predict(object$finalModel, newx=xdata, s=object$bestTune$alpha, type="response"), y )
-    #print(head(comp))
-    mean(apply(comp, 1, function(x) (x[1] - x[2])^2))^0.5
-    #return(head(comp))
-}
-get_rme_from_caret <- function(object, xdata, y) {
-    comp <- cbind(predict(object$finalModel, newx=xdata, s=object$bestTune$alpha, type="response"), y )
-    mean(apply(comp, 1, function(x) (x[1] - x[2])))
-}
+
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training[,vars_out,with=F])
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(training_full_lasso[,c(vars_in_nonfeat, vars_in_feat, vars_in_feat_xsrv),with=F]), training_full_lasso$y)
 2^get_rmse_from_caret(mc_rlm_fit, as.matrix(mc_rlm_fit$trainingData)[,-which(names(mc_rlm_fit$trainingData)==".outcome")], mc_rlm_fit$trainingData$.outcome)
