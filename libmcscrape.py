@@ -5,7 +5,8 @@ import re
 import subprocess
 from pprint import pprint
 from shutil import copyfile
-from local_settings import geoip
+import pygeoip
+geoip = pygeoip.GeoIP(pathLocal+pathData+'GeoIP.dat')
 
 
 #a few functions

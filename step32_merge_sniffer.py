@@ -5,7 +5,7 @@ this script doesn't just integrate sniffer data into omni and reddit, it also lo
 """
 
 from local_settings import pathData, pathDataInPlugins
-from libmcscrape import cat_mc_json_logs, standardize_address
+from libmcscrape import cat_mc_json_logs, standardize_address, get_freshest_data_date
 from shutil import copyfile
 import ujson
 import sys
@@ -30,7 +30,7 @@ def get_valid_json_with_halflines(line, start_char=0):
 
 
 ### load sniffer json into a giant dict indexed by theserver location
-sniffer_dataset = [f.strip() for f in open("lib_datasets_sniffer.txt",'r').readlines()][0]
+sniffer_dataset = get_freshest_data_date("lib_datasets_sniffer.txt")
 d_mcsniff = {}
 with open(pathData+'mcsniffer/'+sniffer_dataset+'/'+"out_servers.json", 'r') as f_mcdata_in:
     for line in f_mcdata_in:
