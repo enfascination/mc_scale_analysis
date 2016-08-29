@@ -103,9 +103,9 @@ coef_nonzero(mc_rlm_fit)
 ### merge with plugin codes
 coefs <- coef_codable(mc_rlm_fit)
 plugin_codes <- get_plugin_codes()
-coefs$all[coefs$all %ni% plugin_codes$feat_code]
+coefs$all[coefs$all %ni% plugin_codes$feat_code]  ### more things to code and integrate back into get_plugin_codes()
 plugin_codes[feat_code %in% coefs$basic$positive, colSums(.SD[,4:ncol(.SD),with=F])] - plugin_codes[feat_code %in% coefs$basic$negative, colSums(.SD[,4:ncol(.SD),with=F])]
-plugin_codes[feat_code %in% coefs$xsrv$positive, colSums(.SD[,4:ncol(.SD),with=F])] - plugin_codes[feat_code %in% coefs$xsrv$negative, colSums(.SD[,4:ncol(.SD),with=F])]
+plugin_codes[feat_code %in% coefs$xsrv$positive, colSums(.SD[,4:ncol(.SD),with=F])] - plugin_codes[feat_code %in% coefs$xsrv$negative, colSums(.SD[,4:ncol(.SD),with=F])] ### the things that get worse or better with size
 
 (mc_rlm_fit$finalModel$df)
 lm_fit <- lm(training_full_lasso$y~1)

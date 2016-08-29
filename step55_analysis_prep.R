@@ -12,17 +12,16 @@ pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_met
 sfeat <- buildFeatureTablePickDependent(spings, splugins, pluginstats, dependent='ncomm4visits')
 
 ### ### this is a function for getting a template to hand code most popular plugins
-writeBlankFeatureCodingTable <- function(mc, filename, featureCountMin) {
-    #mc <- mc[feat_source != 'keyword']
-    ### create wide format: one column per plugin with binary checks
-    ### filter plugins used only once or twice before attempting widening
-    mc <- mc[feat_count > featureCountMin]
-    write.csv(unique(mc[feat_count > featureCountMin,list( feat_count, feat_url, action_admin_up=0, action_other_down=0, grief=0, inoutworld=0, inst=0, normpath=0, forbid=0, boundary=0, position=0, choice=0, info=0, infopath=0, aggregation=0, payoff=0, scope=0, shop=0, tech=0, game=0, loopadmin=0, poly=0, property=0, chat=0, apply=0, resource=0),by=.(feat_code)][order(-feat_count)]), file=filename)
+writeBlankFeatureCodingTable <- function(sfeat, filename) {
+    ### filter plugins used only once or twice 
+    #write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, action_admin_up=0, action_other_down=0, grief=0, inoutworld=0, inst=0, normpath=0, forbid=0, boundary=0, position=0, choice=0, info=0, infopath=0, aggregation=0, payoff=0, scope=0, shop=0, tech=0, game=0, loopadmin=0, poly=0, property=0, chat=0, apply=0, resource=0),by=.(feat_code)][order(-feat_count)]), file=filename)
+    write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, na='', foreign='', gov_auto=(ifelse(!is.na(cat_admintools) & (cat_admintools == 1 | cat_antigrief == 1 | cat_chat == 1 | cat_economy == 1 | cat_informational ==1  ), 1,0)), gov_hand='', resource=ifelse(!is.na(cat_antigrief) & (cat_antigrief == 1) ,'grief',''), audience='', upkeep='', enable_forbid='', institution=ifelse(!is.na(cat_economy) & cat_economy == 1 & cat_chat != 1, 'shop',''), actionsituation='' ), notes='', by=.(feat_code)][order(-feat_count)]), file=filename, row.names=FALSE)
 }
 if (0) {
-    n_servers <- mc[,length(unique(srv_addr))]
+    n_servers <- sfeat[,length(unique(srv_addr))]
     feat_count_min <- max(2, as.integer(n_servers/5000))
-    writeBlankFeatureCodingTable(mc, paste0(pathData, "plugin_codes_raw.csv"), feat_count_min)
+    sfeat2 <- filterDataSetDown(sfeat, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'property', 'tag'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+    writeBlankFeatureCodingTable(sfeat2, paste0(pathData, "plugin_codes_raw.csv"))
 }
 
 
