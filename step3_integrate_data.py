@@ -38,14 +38,15 @@ cat_mc_json_logs(
 ### the do all master scrapes
 #omni_data_dates = ( "20150603" , "20150603" , "20150828" , "20150617" , "20150923" , "20151101" , "20151230" , "20160202" , "20160229" , "20160323" )
 omni_data_dates = get_data_dates("lib_datasets_plugins.txt")
-omni_data_files = (   ### first six were created with non-standard format that I have now standarized
+omni_data_files = [   ### first six were created with non-standard format that I have now standarized
         "20150603_startedmerging/mcorgservers_step3.txt"
         , "20150603_startedmerging/mcservers_step3_merged.txt"
         , "20150828"+"/"+"mcservers_step3_master.txt"
         , "20150617/mcshodanservers_step3_20150617.json"
         , "20150923"+"/"+"mcservers_step3_master.txt"
         , "20151101/mcservers_step3_master_20151106_shodanandmcorg.txt"
-        ).extend([d+"/"+"mcservers_step3_master.txt" for d in omni_data_dates[6:] ])
+        ]
+omni_data_files.extend([d+"/"+"mcservers_step3_master.txt" for d in omni_data_dates[6:] ])
 print("concatenate master logs")
 cat_mc_json_logs(
     [pathDataInPlugins+dataset_file for dataset_file in omni_data_files]

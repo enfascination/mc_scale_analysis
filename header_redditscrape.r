@@ -1,3 +1,4 @@
+options(stringsAsFactors = FALSE)  ### I can't stand factors when i didn't assign them explicitly
 pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
 source(paste0(pathLocal,"local_settings.R"))
 source(paste0(pathLocal,"libs_mc_scrape.R"))
