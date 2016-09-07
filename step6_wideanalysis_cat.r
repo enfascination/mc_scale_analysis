@@ -44,7 +44,7 @@ vars_in_feat_xsignxsrv <- paste("norms_srvmax", vars_in_feat, sep='_')
 names(interact_xsignxsrv) <- vars_in_feat_xsignxsrv
 mc_p <- cbind(mc_p, interact_xsrv, interact_xsign, interact_xsignxsrv)
 
-mc_split <- splitDataTestTrain(mc_h, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
+mc_split <- splitDataTestTrain(mc_p, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
 training <- mc_split$train
 validate <- mc_split$validate
 testing <- mc_split$test

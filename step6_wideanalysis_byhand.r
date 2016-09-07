@@ -24,7 +24,7 @@ mc <- merge(mc, plugin_codes_byhand[,c(1,3:ncol(plugin_codes_byhand)),with=FALSE
 mc_h <- merge(
         mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "plugin_count", "log_plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count")],
         #mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "hierarchy", "property", "chat", "apply", "resource")]
-        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("gov", "res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor", "inst_position_h", "inst_position_v")]
+        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("gov", "res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v")]
         , by="srv_addr", all=T)
 mc_h <- merge(
         mc_h,
@@ -37,7 +37,7 @@ vars_out <- c('ylog')
 vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "weeks_up_todate", 'jubilees'), c("log_plugin_count", "dataset_reddit", "dataset_mcs_org", "aud_none", "use_na", "inst_none" ))
 #vars_in_feat <-  names(mc_h)[which(names(mc_h) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] 
 #vars_in_feat <- c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "estnorm", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", 'loopadmin', 'poly', 'property', 'chat')
-vars_in_feat <- c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney" , "aud_users", "aud_admin", "actions_user", "actions_audience", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor", "inst_position_h", "inst_position_v", "cat_admintools", "cat_antigrief", "cat_chat", "cat_economy", "cat_informational", "cat_webadmin", "cat_devtools", "cat_fun", "cat_general", "cat_mechanics", "cat_misc", "cat_roleplay", "cat_teleportation", "cat_world", "cat_fixes", "cat_worldgen", "resource", "audience", "upkeep", "institution")
+vars_in_feat <- c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney" , "aud_users", "aud_admin", "actions_user", "actions_audience", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "cat_admintools", "cat_antigrief", "cat_chat", "cat_economy", "cat_informational", "cat_webadmin", "cat_devtools", "cat_fun", "cat_general", "cat_mechanics", "cat_misc", "cat_roleplay", "cat_teleportation", "cat_world", "cat_fixes", "cat_worldgen", "resource", "audience", "upkeep", "institution")
 #interact_xsrv <- as.data.table(mc_h[,vars_in_feat,with=F][,apply(.SD, 2, function(x) x*mc_h$srv_max_log )])
 #vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 #names(interact_xsrv) <- vars_in_feat_xsrv
@@ -56,11 +56,45 @@ ggplot(mc, aes(x=institution, y=upkeep)) + geom_jitter()
 ggplot(data=training_full_lasso,aes(x=srv_max, y=gov)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') 
 ggplot(data=training_full_lasso[!is.na(gov),.(srv_max_log=cut(srv_max_log, 10), gov=gov)],aes(x=srv_max_log)) + geom_bar(position='fill', aes(y=..prop.., group=gov,fill=gov)) 
 ### resource managemanet style by size:
-ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max, 'y'"),  measure.vars = c("res_grief", "res_ingame", "res_realmoney", "res_performance", "res_players"), variable.name = 'resource', value.name='resource_count'),aes(x=srv_max, y=resource_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~resource, ncol=2) 
+ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = c("res_grief", "res_ingame", "res_realmoney", "res_performance", "res_players"), variable.name = 'resource', value.name='resource_count'),aes(x=srv_max, y=resource_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~resource, ncol=2) 
 ### institution by size:
-ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", 'y'),  measure.vars = grep("^inst_", names(training_full_lasso)), variable.name = 'institution', value.name='institution_count'),aes(x=srv_max, y=institution_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~institution, ncol=2) 
+ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = grep("^inst_", names(training_full_lasso)), variable.name = 'institution', value.name='institution_count'),aes(x=srv_max, y=institution_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~institution, ncol=2) 
 ggplot(mc[institution!='noinstitution' & resource!='noresource'], aes(x=institution, y=resource, fill=..count..)) + geom_bin2d()
 ### governance style counts (*_count) by size: INCONCLUSIVE. not enough data
+
+### reporduce intiial early plots and their styles
+pred_hist <- mc
+pred_hist[ ,':='(
+        inst_name={ifelse( gov==1 , "Misc gov", 'Misc') %>%
+                   #ifelse( gov==1 & institution %in% c("noinstitution", "monitor", "action_space"), "Misc", '') %>%
+                   ifelse( gov==1 & institution == "boundary", "Entry restrictions", .) %>%
+                   ifelse( gov==1 & institution == "action_space_up", "More player actions", .) %>%
+                   ifelse( gov==1 & institution == "action_space_down", "Fewer player actions", .) %>%
+                   ifelse( gov==1 & institution == "shop", "Economy", .) %>%
+                   ifelse( gov==1 & institution == "chat", "Communication", .) %>%
+                   ifelse( gov==1 & institution == "privateproperty", "Private property", .) %>%
+                   ifelse( gov==1 & institution == "broadcast", "Admin broadcast", .) %>%
+                   ifelse( gov==1 & institution == "monitor_by_peer", "Peer monitoring", .) %>%
+                   ifelse( gov==1 & institution == "monitor_by_admin", "Admin monitoring", .) %>%
+                   ifelse( gov==1 & institution == "position_v", "More groups, vertical", .) %>%
+                   ifelse( gov==1 & institution == "position_h", "More groups, horizontal", .) %>%
+                   factor(levels=c( "Communication", "Private property", "Economy", "More player actions", "Entry restrictions", "Fewer player actions", "Admin broadcast", "Peer monitoring", "Admin monitoring", "More groups, vertical", "More groups, horizontal", "Misc gov", "Misc"))
+                   }, 
+                resource_name={
+                   ifelse( gov==1 & resource == "noresource", "Not resource related", "Not resource related") %>%
+                   ifelse( gov==1 & resource == "grief", "Anti-grief", .) %>%
+                   ifelse( gov==1 & resource == "ingame", "Game-related resources", .) %>%
+                   ifelse( gov==1 & resource == "performance", "Server performance", .) %>%
+                   ifelse( gov==1 & resource == "players", "Player community", .) %>%
+                   ifelse( gov==1 & resource == "realmoney", "Server provisioning", .) %>%
+                   factor(levels=c("Game-related resources", "Server performance", "Server provisioning", "Player community", "Not resource related", "Anti-grief"))
+                   }) ]
+#pred_hist$inst_name <- factor(pred_hist$inst_name, levels=c("Entry restrictions", "Communication", "More actions, players", "Economy", "Fewer actions, players", "More actions, admins", '')) 
+ggplot(subset(pred_hist, gov==1 & institution %in% c("communication", "boundary", "action_space_down", "broadcast", "monitor_by_admin")), aes(x=srv_max_bak, fill=inst_name)) + geom_histogram(position="fill", binwidth=5/5)+ scale_x_log10("Server capacity")+ scale_y_log10("Count of servers") + scale_fill_brewer("Rule type", type="div",palette=8) + theme_bw() + annotation_logticks(sides = "b", short=unit(0,"cm"))
+ggplot(pred_hist, aes(x=(ncomm4visits+1), fill=inst_name)) + geom_histogram(position="fill", binwidth=5/5)+ scale_x_log10("Server capacity")+ scale_y_continuous("Count of servers") + scale_fill_brewer("Rule type", type="div",palette=8) + theme_bw() + annotation_logticks(sides = "b", short=unit(0,"cm"))
+ggplot(pred_hist, aes(x=ncomm4visits, fill=resource_name)) + geom_histogram(position="fill", binwidth=5/5)+ scale_x_log10("Server capacity")+ scale_y_continuous("Count of servers") + scale_fill_brewer("Resource type", type="div",palette=8) + theme_bw() + annotation_logticks(sides = "b", short=unit(0,"cm"))
+### SERvers with greater communities rely less on griefer prevention
+ggplot(pred_hist, aes(x=srv_max, fill=resource_name)) + geom_histogram(position="fill", binwidth=0.5)+ scale_x_log10("Server size")+ scale_y_log10("Plugin proportions by type") + scale_fill_brewer("Plugin type", type="div",palette=8) + theme_bw() + annotation_logticks(sides = "b", short=unit(0,"cm"))
 
 summary(lm_comm <- rlm(y ~ srv_max_log + srv_max_log*weeks_up_todate + date_ping_int + jubilees + srv_max_log*log_plugin_count + srv_max_log*dataset_reddit + srv_max_log*dataset_mcs_org  + cat_fun + cat_general + cat_mechanics + cat_misc + cat_roleplay + cat_teleportation + cat_world + cat_fixes +  cat_worldgen + res_grief*srv_max_log + res_ingame*srv_max_log + res_performance*srv_max_log + res_players*srv_max_log + res_realmoney*srv_max_log +  aud_users*srv_max_log + aud_admin*srv_max_log + actions_user*srv_max_log + use_coarseauto*srv_max_log + use_coarsemanual*srv_max_log + use_fineauto*srv_max_log + use_finemanual*srv_max_log + inst_broadcast*srv_max_log + inst_chat*srv_max_log + inst_privateproperty*srv_max_log + inst_shop*srv_max_log + inst_action_space_up*srv_max_log + inst_action_space_down*srv_max_log + inst_boundary*srv_max_log + inst_monitor*srv_max_log + inst_position_h*srv_max_log + inst_position_v*srv_max_log +  aud_users:actions_audience:srv_max_log + aud_admin:actions_audience:srv_max_log,  data=training_full_lasso))
 asdt(tidy(lm_comm))[abs(statistic)>=2]
