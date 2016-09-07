@@ -46,7 +46,7 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
         sserv <- spings[bestweek4visits==T,.(srv_addr, ncomm4visits)][sserv,on=c("srv_addr")]
         sserv <- sserv[!is.na(ncomm4visits)]
         #sserv[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
-        sserv[,':='(y=ncomm4visits, ylog=log2(ncomm4visits+1)) ]
+        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1)) ]
     } else {
         stop("ERROR GKJSDGKHJHHOI")
     }
@@ -78,6 +78,14 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
     sfeat[,dataset_mcs_org:=ifelse(dataset_source=="mcs_org",1,0)]
     sfeat[,':='(jubilees=as.integer(jubilees), srv_repquery=as.integer(srv_repquery), srv_repplug=as.integer(srv_repplug), srv_repsample=as.integer(srv_repsample), srv_repsniff=as.integer(srv_repsniff), date_ping_int=as.integer(date_ping), weeks_up_todate=as.numeric(weeks_up_todate))]
     sfeat[!is.na(keyword_count) | !is.na(tag_count) ,norm_count:=sum(keyword_count,tag_count, na.rm=T), by=.(srv_addr)]
+    
+    ### merge in plugin info to help filtering specifically, banning of non-vanilla servers
+    ### maybe refresh this occasionally 
+    plugin_codes_byhand <- get_plugin_codes()
+    sfeat <- merge(sfeat, plugin_codes_byhand[,c(1,3:ncol(plugin_codes_byhand)),with=FALSE], by=c('feat_code'), all.x=T, all.y=F)
+    ### add a column measuring the diversity of solutions used by a server
+    entropy_calc <- function(x) {-x*log(x)}
+    sfeat[,srv_entropy:={inst_dist<-colSums(.SD[,grep("^inst_", names(sfeat)),with=FALSE]); inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }]
 
     return(sfeat)
 }
@@ -94,11 +102,13 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     ### need to filter out servers that deiate too far from vanilla gameplay
     ###  and when I do this, I need to do this before performing and filtering on plugin counts, else I'll end up with plugins used only once by the unfilitered sites
     if (cutNonVanilla) {
-        word_forbid_short <- matrix(c("hub", "minigames", "mini games", "multiverse", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "multiverse-portals", "robbit", "mcmmo", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "multiworld", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
-        whitelist <- c("smp", "pve", "vanilla", "semi-vanilla", "survival", "anarchy")
-        mc_whitelist <- mc[feat %in% whitelist, unique(srv_addr)]
-        mc_forbid  <- mc[feat %in% word_forbid_short[,1], unique(srv_addr)]
+        #word_forbid_short <- matrix(c("hub", "minigames", "mini games", "multiverse", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "multiverse-portals", "robbit", "mcmmo", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "multiworld", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
+        #whitelist <- c("smp", "pve", "vanilla", "semi-vanilla", "survival", "anarchy")
+        #mc_whitelist <- mc[feat %in% whitelist, unique(srv_addr)]
+        #mc_forbid  <- mc[feat %in% word_forbid_short[,1], unique(srv_addr)]
         #mc_coded  <- mc[feat %in% coded_key_keywords_2[,feat], unique(srv_addr)]
+        #mc <- mc[(srv_addr %ni% mc_forbid) ,]
+        mc_forbid  <- mc[!is.na(blacklist) & blacklist == 1 , unique(srv_addr)]
         mc <- mc[(srv_addr %ni% mc_forbid) ,]
     }
     if (cutNonPositiveDependent) {
@@ -178,16 +188,18 @@ splitDataTestTrain <- function(data, proportions=c(0.6, 0.4), validation_set=FAL
 }
 
 get_plugin_codes <- function() {
-    ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugins\ \(X\).csv  data/plugin_codes_byhand.csv 
+    ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugin_widehandcodes_rawXXX.csv  ~/projecto/research_projects/minecraft/redditcommunity/data/plugin_codes_byhand20160905XXX.csv
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160805.csv")))
-    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
+    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv")))
     pcodes <- plugin_codes_byhand
-    pcodes <- pcodes[1:(nrow(pcodes)-1),]
+    #pcodes <- pcodes[1:(nrow(pcodes)-1),]
     pcodes[,feat_count:=NULL]
     pcodes[,notes:=NULL]
     pcodes$na <- with(pcodes, ifelse(is.na(na), 0, 1))
     pcodes$foreign <- with(pcodes, ifelse(is.na(foreign), 0, 1))
     pcodes$gov <- with( pcodes, ifelse(gov_auto==0 | gov_hand==0 | is.na(gov_hand), 0, 1))
+    pcodes$blacklist <- with( pcodes, ifelse(!is.na(blacklist) & blacklist == 1,1,0))
     pcodes$na <- NULL
     pcodes$foreign <- NULL
     pcodes$gov_auto <- NULL
@@ -212,29 +224,32 @@ get_plugin_codes <- function() {
     pcodes$actionsituation <- NULL
     pcodes$institution <- with(pcodes, ifelse(institution=='action_space' & enable_forbid_user == 1, "action_space_up", institution))
     pcodes$institution <- with(pcodes, ifelse(institution=='action_space' & enable_forbid_user == -1, "action_space_down", institution))
+    pcodes$institution <- with(pcodes, ifelse(institution=='monitor' & audience == 'users', "monitor_by_peer", institution))
+    pcodes$institution <- with(pcodes, ifelse(institution=='monitor' & audience == 'admin', "monitor_by_admin", institution))
     pcodes$resource <- factor(pcodes$resource)
     pcodes$audience <- factor(pcodes$audience)
     pcodes$upkeep <- factor(pcodes$upkeep)
     pcodes$institution <- factor(pcodes$institution)
-    m1 <- dcast(pcodes, formula = feat_code + feat_url + gov + enable_forbid_user + enable_forbid_audience ~ resource, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
-    m2 <- dcast(pcodes, formula = feat_code + feat_url + gov + enable_forbid_user + enable_forbid_audience ~ audience, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
-    m3 <- dcast(pcodes, formula = feat_code + feat_url + gov + enable_forbid_user + enable_forbid_audience ~ upkeep, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
-    m4 <- dcast(pcodes, formula = feat_code + feat_url + gov + enable_forbid_user + enable_forbid_audience ~ institution, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
-    mm1 <- merge(m1, m2[,c(1,6:ncol(m2))], by='feat_code') 
-    mm2 <- merge(m3, m4[,c(1,6:ncol(m4))], by='feat_code')
-    gg <- merge( mm1, mm2[,c(1,6:ncol(mm2))], by='feat_code') 
+    m1 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ resource, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m2 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ audience, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m3 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ upkeep, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m4 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ institution, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    mm1 <- merge(m1, m2[,c(1,7:ncol(m2))], by='feat_code') 
+    mm2 <- merge(m3, m4[,c(1,7:ncol(m4))], by='feat_code')
+    gg <- merge( mm1, mm2[,c(1,7:ncol(mm2))], by='feat_code') 
     gg <- asdt(gg)
-    setnames(gg, c("grief", "ingame", "noresource", "performance", "players", "realmoney", "noaudience", "users", "admin", "enable_forbid_user", "enable_forbid_audience", "noupkeep", "coarseauto", "coarsemanual", "fineauto", "finemanual", "noinstitution", "broadcast", "chat",  "privateproperty", "shop", "action_space", "action_space_up", "action_space_down", "boundary", "monitor", "position_h", "position_v"), c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor", "inst_position_h", "inst_position_v"))
-    setcolorder(gg, c("feat_code", "feat_url", "gov", "res_none", "res_grief", "res_ingame", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor", "inst_position_h", "inst_position_v"))
+    ### I removed monitor from here, but i might want it back in t inthe future
+    setnames(gg, c("grief", "ingame", "noresource", "performance", "players", "realmoney", "noaudience", "users", "admin", "enable_forbid_user", "enable_forbid_audience", "noupkeep", "coarseauto", "coarsemanual", "fineauto", "finemanual", "noinstitution", "broadcast", "chat",  "privateproperty", "shop", "action_space", "action_space_up", "action_space_down", "boundary", "monitor_by_peer", "monitor_by_admin", "position_h", "position_v"), c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v"))
+    setcolorder(gg, c("feat_code", "feat_url", "blacklist", "gov", "res_none", "res_grief", "res_ingame", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v"))
     ### now merge original columns back into the dmmy variable ones
     gg <- merge(gg, pcodes[,.(feat_code, resource, audience, upkeep, institution)], by='feat_code')
     ### sets of columns are mutually exclusive, making validity tests easy
-    expect_true(all(rowSums(gg[,4:9,with=FALSE]) == 1))
-    expect_true(all(rowSums(gg[,10:12,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,5:10,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,11:13,with=FALSE]) == 1))
     expect_true(all(gg[,actions_user %in% c(-1,0,1)]))
     expect_true(all(gg[,actions_audience %in% c(-1,0,1)]))
-    expect_true(all(rowSums(gg[,15:19,with=FALSE]) == 1))
-    expect_true(all(rowSums(gg[,20:31,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,16:20,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,21:33,with=FALSE]) == 1))
     return(gg )
 }
 
