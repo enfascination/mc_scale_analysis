@@ -13,7 +13,7 @@ mc <- merge(mc, pluginstats[build=='curse', list(feat, action_other_up, action_o
 ### filter down a little
 mc_sub <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=15, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 
-mc_sub <- mc_sub[,c(lapply(.SD[,.(srv_details, dataset_source, weeks_up_todate, date_ping_int, srv_max, srv_max_log, srv_max_bak, genivisits, ncomm4visits, latency10ppl, latency20ppl, latency50pct, T1, T2, T3, T4, srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic, nuvisits, nvisitsobs, nvisitsunobs)], unique), lapply(.SD[,.(action_other_up, action_other_down, action_admin, role_rank, role_type, boundary, economy, communication, rbasic,rbiophys, popvol, popforce, rprevent, rexternal, rhetero, rincntv, rinst, rtech, rspat, rsoccap, rleader, rnorms)], sum), infopred_central=sum(rinfopred==1), infopred_dist=sum(rinfopred==2), strategy=sum(inst_type=="Strategy"), norm=sum(inst_type=="Norm"), rule=sum(inst_type=="Rule"), nodiscretion=sum(inst_type=="No discretion")), by=.(srv_addr)]
+mc_sub <- mc_sub[,c(lapply(.SD[,.(srv_details, dataset_source, weeks_up_todate, date_ping_int, srv_max, srv_max_log, srv_max_bak, genivisits, ncomm4visits, latency10ppl, latency20ppl, latency50pct, T1, T2, T3, T4, srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic, nuvisits12, nvisitsobs12, nvisitsunobs)], unique), lapply(.SD[,.(action_other_up, action_other_down, action_admin, role_rank, role_type, boundary, economy, communication, rbasic,rbiophys, popvol, popforce, rprevent, rexternal, rhetero, rincntv, rinst, rtech, rspat, rsoccap, rleader, rnorms)], sum), infopred_central=sum(rinfopred==1), infopred_dist=sum(rinfopred==2), strategy=sum(inst_type=="Strategy"), norm=sum(inst_type=="Norm"), rule=sum(inst_type=="Rule"), nodiscretion=sum(inst_type=="No discretion")), by=.(srv_addr)]
 mc_sub[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
 expect_true(mc_sub[,length(unique(srv_addr))] == mc_sub[,length(unique(srv_addr)), by=dataset_source][,sum(V1)])
 c(dim(mc_sub[,.N,by=srv_addr]) , dim(mc_sub[srv_repstat==T,.N,by=srv_addr]) , dim(mc_sub[srv_repquery==T,.N,by=srv_addr]) , dim(mc_sub[srv_repplug==T,.N,by=srv_addr]) , dim(mc_sub[srv_repsample==T,.N,by=srv_addr]), dim(mc_sub[srv_repsniff==T,.N,by=srv_addr]) , dim(mc_sub[srv_reptopic==T,.N,by=srv_addr]))
@@ -41,6 +41,7 @@ summary(rlm(ncomm4visits ~        weeks_up_todate + date_ping_int + srv_max*rbio
 summary(lm(ncomm4visits ~        weeks_up_todate + date_ping_int  + srv_max*rbiophys + srv_max*popforce + srv_max*rprevent + srv_max*rexternal + srv_max*rhetero + srv_max*rinst + srv_max*rtech + srv_max*rspat + srv_max*rleader + srv_max*infopred_central + srv_max*infopred_dist + srv_max*rnorms, mc_sub[dataset_source %in% c('reddit', 'mcs_org')]))
 
 
+mm <- mc_sub
 summary(mm)
 pred_coefs <- coef(mm)
 pred_coefs <- 1
