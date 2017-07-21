@@ -113,6 +113,10 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
         mc <- mc[nmaxpop > 0]
         mc <- mc[nuvisits12 > 1]
         #mc <- mc[srv_retired==TRUE]  ### I have to worry about right censoring if I omit this, but I keep over 20% of data
+    } else {
+        mc <- mc[y>=0]
+        mc <- mc[nmaxpop > 0]
+        mc <- mc[nuvisits12 >= 0]
     }
 
     mc <- mc[dataset_source %in% keepDataSource]

@@ -14,7 +14,7 @@ expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=max(2, as.integer(n_servers/1000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=max(2, as.integer(n_servers/1000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 dim(mc)
 #writeBlankFeatureCodingTable(mc, paste0(pathData, "plugin_widehandcodes_raw.csv"))
 ### am I missing any plugins or features?
@@ -48,7 +48,7 @@ mw[,pop_size_factor_fine:=cut(srv_max_log, breaks=25, ordered_result=TRUE, right
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,8,12), labels=c("<4", "4 to 16", "16 to 64", "64 to 256", "\u2265256"), ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
-mw[,perf_factor:=cut(log2(y+1), breaks=c(0,2,4,6,8), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
+mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,2,4,6,8), labels=c("0", "0 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 mw[,':='(res_realworld=res_realmoney+res_performance, res_realmoney=NULL,res_performance=NULL)]
 mw[,sum_institution:=rowSums(.SD[, grep("inst_", names(mw), value=TRUE), with=F ])]
@@ -71,7 +71,7 @@ mc_valid <- mc_full[srv_addr %in% mw_valid$srv_addr]
 mc_test <- mc_full[srv_addr %in% mw_test$srv_addr]
 
 ### plotting function
-make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=geom_blank(), ggguide = guide_legend(reverse=TRUE), reps=0, return_plot=T, facetting=c(), unscaledyvar=TRUE, xvar="pop_size_factor", yvar="perf_factor", ggtext=TRUE, ...) {
+make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=geom_blank(), ggguide = guide_legend(reverse=TRUE), reps=0, return_plot=T, facetting=c(), unscaledyvar=TRUE, xvar="pop_size_factor", yvar="perf_factor", ggtext=TRUE, ggrug=TRUE, ...) {
     ###  this function makes the main plot of the paper in a few ways.
     ### data_prep_fn has to be bootstrap compliant, meaning it has two arguments, data and (possibly complete) indices for the data. data.table is amazing and can take null as the first argument, meaning you only have to pass one of the two arguments when you aren't bootstrapping
     ### ggmore lets you pass some aes-free ggplot elements as arguments for max  ease and customizability
@@ -91,12 +91,19 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
         mwd1 <- mwdata[,.(pop_var=fillvarsfn(.SD[,c(fillvarscols), with=F], ...)),by=plot_groups]
     }
     if (return_plot) {
-        if (unscaledyvar) 
-            mwp1 <- ggplot(mwd1, aes_string(x=xvar, y=yvar)) + scale_y_discrete("Returning members")#, labels=c("0", "", "", "10", "", "", "100"))
-        else 
-            mwp1 <- ggplot(mwd1, aes_string(x=xvar, y=yvar)) + scale_y_discrete("Returning members")
-        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size") + guides(fill=ggguide) + ggmore
-        if (ggtext) mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 3)), color="dark grey")
+        mwp1 <- ggplot(mwd1, aes_string(x=xvar, y=yvar))
+        if (unscaledyvar) {
+            mwp1 <- mwp1 + scale_y_discrete("Returning members", expand = c(0.035,0))#, labels=c("0", "", "", "10", "", "", "100"))
+        } else {
+            mwp1 <- mwp1 + scale_y_discrete("Returning members", expand = c(0.035,0))
+        }
+        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
+        if (ggtext) {
+            mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 3)), color="dark grey")
+        }
+        if (ggrug) {
+            mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
+        }
         return(mwp1)
     }
     else {
@@ -137,7 +144,7 @@ gov_var_diversity <- function(data, i_samp) {
 
 ### mere data density
 (plot_srv_density <- make_plot_size_by_success(mw_train, "weeks_up_total", function(x,i) nrow(x[i]), ggmore=scale_fill_gradientn(colors=grey(seq(from=0.6,to=0.3,length.out=6)), values=rescale(c(0,4,16,64,256,1024)), breaks=c(0,4,16,64,256,1024)), ggguide=guide_legend("Server\ncount", reverse=TRUE), reps=10))
-(plot_srv_density <- make_plot_size_by_success(mw_train, "weeks_up_total", function(x,i) nrow(x[i]), ggmore=scale_fill_gradientn(colors=grey(seq(from=0.6,to=0.3,length.out=6)), values=rescale(c(0,4,16,64,256,1024)), breaks=c(0,4,16,64,256,1024)), ggguide="none", reps=10))
+plot_srv_density <- plot_srv_density + guides(fill="none")
 ggsave(plot_srv_density, file=paste0(pathImages, "plot_srv_density.png"), units='cm', width=3.25, height=2.5, scale=3)
 # plot hazard  log and linear
 (plot_srv_hazard_bar1 <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_bar(stat="identity") + theme_bw() + scale_y_continuous("Count") + xlab("Longevity (weeks)") )
