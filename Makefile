@@ -34,7 +34,8 @@ prepanalysis:
 	time R -f step55_analysis_prep.R 
 
 analysis:
-	time R -f step6_plotting.r
+	#time R -f step6_plotting.r
+	time R -f step8_results.r
 
 test:
 	time R -f tests/testthat.r
