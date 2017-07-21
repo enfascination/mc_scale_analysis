@@ -142,14 +142,14 @@ if (remake_visits_data) {
 
 
 ### number of players who came mor than thirty times ina  month
-xx <- dbSendQuery(con, "ALTER TABLE serversweeks ADD COLUMN ncomm30visits INTEGER NOT NULL DEFAULT 0, ADD COLUMN bghost BOOLEAN DEFAULT TRUE")
+xx <- dbSendQuery(con, "ALTER TABLE serversweeks ADD COLUMN ncomm30visits INTEGER NOT NULL DEFAULT 0, ADD COLUMN nvisits_month INTEGER NOT NULL DEFAULT 0, ADD COLUMN nuvisits_month INTEGER NOT NULL DEFAULT 0, ADD COLUMN bghost BOOLEAN DEFAULT TRUE")
 xx <- dbSendQuery(con, paste0("WITH monthvisits AS 
-                      (SELECT server, year, week, (COUNT(nvisitsbyinmonth)<=1) AS bghost, COUNT(nvisitsbyinmonth>=30) AS ncomm30visits FROM 
+                      (SELECT server, year, week, SUM(nvisitsbyinmonth) AS nvisitsbyinmonth, COUNT(nvisitsbyinmonth) AS nuvisitsbyinmonth, (COUNT(nvisitsbyinmonth)<=1) AS bghost, COUNT(nvisitsbyinmonth>=30) AS ncomm30visits FROM 
                           ( SELECT *, SUM(nvisitsby) OVER 
                               (PARTITION BY server, uid ORDER BY year, week ROWS BETWEEN CURRENT ROW AND 4 FOLLOWING) AS nvisitsbyinmonth 
                               FROM playersweeks
                           ) AS inner1 GROUP BY server, year, week
-                      ) UPDATE serversweeks AS sw SET (ncomm30visits, bghost) = (monthvisits.ncomm30visits, monthvisits.bghost) 
+                      ) UPDATE serversweeks AS sw SET (ncomm30visits, nvisits_month, nuvisits_month, bghost) = (monthvisits.ncomm30visits, monthvisits.nvisitsbyinmonth, monthvisits.nuvisitsbyinmonth, monthvisits.bghost) 
                       FROM monthvisits WHERE sw.server = monthvisits.server AND sw.year = monthvisits.year AND sw.week = monthvisits.week"))
 
 ### get that back up and into postgres so I can do rolling window stuff next

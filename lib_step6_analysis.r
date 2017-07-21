@@ -83,9 +83,6 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
     ### maybe refresh this occasionally 
     plugin_codes_byhand <- get_plugin_codes()
     sfeat <- merge(sfeat, plugin_codes_byhand[,c(1,3:ncol(plugin_codes_byhand)),with=FALSE], by=c('feat_code'), all.x=T, all.y=F)
-    ### add a column measuring the diversity of solutions used by a server
-    entropy_calc <- function(x) {-x*log(x)}
-    sfeat[,srv_entropy:={inst_dist<-colSums(.SD[,grep("^inst_", names(sfeat)),with=FALSE]); inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }]
 
     return(sfeat)
 }
@@ -114,6 +111,8 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     if (cutNonPositiveDependent) {
         mc <- mc[y>0]
         mc <- mc[nmaxpop > 0]
+        mc <- mc[nuvisits12 > 1]
+        #mc <- mc[srv_retired==TRUE]  ### I have to worry about right censoring if I omit this, but I keep over 20% of data
     }
 
     mc <- mc[dataset_source %in% keepDataSource]
@@ -191,7 +190,8 @@ get_plugin_codes <- function() {
     ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugin_widehandcodes_rawXXX.csv  ~/projecto/research_projects/minecraft/redditcommunity/data/plugin_codes_byhand20160905XXX.csv
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160805.csv")))
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
-    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv"), stringsAsFactors=FALSE))
+    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160909.csv"), stringsAsFactors=FALSE))
     pcodes <- plugin_codes_byhand
     #pcodes <- pcodes[1:(nrow(pcodes)-1),]
     pcodes[,feat_count:=NULL]
@@ -230,7 +230,7 @@ get_plugin_codes <- function() {
     pcodes$audience <- factor(pcodes$audience)
     pcodes$upkeep <- factor(pcodes$upkeep)
     pcodes$institution <- factor(pcodes$institution)
-    m1 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ resource, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m1 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ as.character(resource), value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
     m2 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ audience, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
     m3 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ upkeep, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
     m4 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ institution, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
