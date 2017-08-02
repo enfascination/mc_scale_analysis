@@ -29,8 +29,7 @@ library(rms)
 library(broom)
 
 ### functions before data prep
-buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, dependent='ncomm4visits') {
-    
+buildPickDependent <- function(spings, dependent='ncomm4visits') {
     ### Pick Variable
     ### to do it, I have to create a one-row-per-server table 
     ###  it is occasionally useful so I'll save it maybe
@@ -51,7 +50,10 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
         stop("ERROR GKJSDGKHJHHOI")
     }
     #saveRDS(sserv, paste0(pathData, "step55_servers_w_", dependent,".rds"))
+    return(sserv)
+}
 
+buildFeatureTable <- function(sserv, splugins, pluginstats) {
     ### Enrich sfeat table with some more features
     ### implictly, an important thing happening here is that null postuid means getting rid of pings that didn't match to plugin hauls
     sfeat <- splugins[,list(post_uid, feat, feat_code, feat_type, feat_source, feat_trust, plugin_count, keyword_count, tag_count, sign_count)][sserv[!is.na(post_uid)], on=c("post_uid")]  ### CAREFUL!!!  the same IPs came from a few different data sources.  argg.
@@ -68,9 +70,10 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
 
     ### Pre-widening Enrichment and Cleaning
     sfeat[,feat_count:=.N,by="feat_code"]
+    sfeat[,plugin_specialization:= .SD[feat_source=="plugin", as.numeric(median(feat_count))], by="srv_addr"]
     sfeat[srv_max>0,srv_max_log:=log10(srv_max)]
     sfeat[,log_plugin_count:=log10(plugin_count+1)]
-    #spings <- spings[dataset_source=='reddit']
+    #sserv <- sserv[dataset_source=='reddit']
     #sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
     #sfeat[,dataset_source:=as.numeric(factor(dataset_source))]
     sfeat[,dataset_reddit:=ifelse(dataset_source=="reddit",1,0)]
@@ -88,38 +91,29 @@ buildFeatureTablePickDependent <- function(spings, splugins, pluginstats, depend
 }
 
 filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org')) {
-    ### Pre-widening Filtering
-    if (cutUnrealistic) {
-        mc <- mc[srv_max >0]
-        #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
-        mc <- mc[nmaxpop <= 1000]
-        max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593
-        mc[srv_max >= max_srv_max_observed, ':='(srv_max=max_srv_max_observed, srv_max_log=log10(max_srv_max_observed))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data.
-    }
-    ### need to filter out servers that deiate too far from vanilla gameplay
-    ###  and when I do this, I need to do this before performing and filtering on plugin counts, else I'll end up with plugins used only once by the unfilitered sites
-    if (cutNonVanilla) {
-        #word_forbid_short <- matrix(c("hub", "minigames", "mini games", "multiverse", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "multiverse-portals", "robbit", "mcmmo", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "multiworld", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
-        #whitelist <- c("smp", "pve", "vanilla", "semi-vanilla", "survival", "anarchy")
-        #mc_whitelist <- mc[feat %in% whitelist, unique(srv_addr)]
-        #mc_forbid  <- mc[feat %in% word_forbid_short[,1], unique(srv_addr)]
-        #mc_coded  <- mc[feat %in% coded_key_keywords_2[,feat], unique(srv_addr)]
-        #mc <- mc[(srv_addr %ni% mc_forbid) ,]
-        mc_forbid  <- mc[!is.na(blacklist) & blacklist == 1 , unique(srv_addr)]
-        mc <- mc[(srv_addr %ni% mc_forbid) ,]
-    }
-    if (cutNonPositiveDependent) {
-        mc <- mc[y>0]
-        mc <- mc[nmaxpop > 0]
-        mc <- mc[nuvisits12 > 1]
-        #mc <- mc[srv_retired==TRUE]  ### I have to worry about right censoring if I omit this, but I keep over 20% of data
-    } else {
-        mc <- mc[y>=0]
-        mc <- mc[nmaxpop > 0]
-        mc <- mc[nuvisits12 >= 0]
-    }
 
-    mc <- mc[dataset_source %in% keepDataSource]
+    print(c("Filter 0:", mc[,length(unique(srv_addr))], nrow(mc) ))
+
+    ### this should go first, otherwise DataProvision will delete mention of 
+    ###  some plugins with blacklist=TRUE and this function will keep servers
+    ###  that should have been excluded
+    mc <- filterDataSetDownComparability(mc, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
+
+    print(c("Filter 1:", mc[,length(unique(srv_addr))], nrow(mc) ))
+
+    mc <- filterDataSetDownDataProvision(mc, featureCountMin=featureCountMin, keepFeatTypes=keepFeatTypes, keepDataSource=keepDataSource)
+
+    print(c("Filter 2:", mc[,length(unique(srv_addr))], nrow(mc) ))
+
+    mc <- filterDataSetDownViability(mc, cutNonPositiveDependent=cutNonPositiveDependent)
+
+    print(c("Filter 3:", mc[,length(unique(srv_addr))], nrow(mc) ))
+
+    return(mc)
+}
+
+filterDataSetDownDataProvision <- function(mc, featureCountMin, keepFeatTypes, keepDataSource) {
+    mc <- mc[dataset_source %in% keepDataSource]  ### minimally comparable
     #mc <- mc[dataset_source != 'omni']
     ### analysis specific searchy filtering 
     mc <- mc[feat_source %in% keepFeatTypes]
@@ -133,13 +127,59 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     #mc <- mc[feat_source=='tag']
     #mc <- mc[feat_source=='plugin']
     #mc[!is.na(keyword_count) | !is.na(sign_count) ,length(unique(srv_addr))]
-
+    print(c("Filter 1.3:", mc[,length(unique(srv_addr))], nrow(mc) ))
+    ### measurability
     ### by default, no filtering happens on features, but it's a good idea to do so for or before some analysis, like the widening
-    mc <- mc[feat_count > featureCountMin]
+    mc <- mc[feat_count > featureCountMin]  # minimally measurable
     ### filter plugins used only a few time before attempting widening
     #n_servers <- mc[,length(unique(srv_addr))]
     #feat_count_min <- max(2, as.integer(n_servers/5000))
     #mc <- mc[feat_count > 2]
+    return(mc)
+}
+
+filterDataSetDownComparability <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org')) {
+    ### Pre-widening Filtering
+    print(c("Filter 1.0:", mc[,length(unique(srv_addr))], nrow(mc) ))
+    if (cutUnrealistic) {  ### minmally comparable
+        mc <- mc[srv_max >0]
+        #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
+        #mc <- mc[nmaxpop <= 1000]  ### its bad when admins edit this to be unrealistic, but it doesn't affect me: bounding values I actually measure catches everything that this catches.
+        max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
+        mc[srv_max >= max_srv_max_observed, ':='(srv_max=max_srv_max_observed, srv_max_log=log10(max_srv_max_observed))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data.
+    }
+
+    print(c("Filter 1.1:", mc[,length(unique(srv_addr))], nrow(mc) ))
+    ### need to filter out servers that deiate too far from vanilla gameplay
+    ###  and when I do this, I need to do this before performing and filtering on plugin counts, else I'll end up with plugins used only once by the unfilitered sites
+    if (cutNonVanilla) { ### minmally comparable
+        #word_forbid_short <- matrix(c("hub", "minigames", "mini games", "multiverse", "multiverse-core", "multiverse-inventories", "multiverse-netherportals", "multiverse-portals", "robbit", "mcmmo", "prison", "raiding", "kitpvp", "parkour", "skyblock", "survival games", "survivalgames", "skywars", "ftb", "pixelmon", "tekkit", "multiworld", "quests", "mobarena", "bedwars", "massivecore"), ncol=1, byrow=T)
+        #whitelist <- c("smp", "pve", "vanilla", "semi-vanilla", "survival", "anarchy")
+        #mc_whitelist <- mc[feat %in% whitelist, unique(srv_addr)]
+        #mc_forbid  <- mc[feat %in% word_forbid_short[,1], unique(srv_addr)]
+        #mc_coded  <- mc[feat %in% coded_key_keywords_2[,feat], unique(srv_addr)]
+        #mc <- mc[(srv_addr %ni% mc_forbid) ,]
+        mc_forbid  <- mc[!is.na(blacklist) & blacklist == 1 , unique(srv_addr)]
+        mc <- mc[(srv_addr %ni% mc_forbid) ,]
+    }
+
+    print(c("Filter 1.2:", mc[,length(unique(srv_addr))], nrow(mc) ))
+
+    return(mc)
+}
+
+filterDataSetDownViability <- function(mc, cutNonPositiveDependent=TRUE ) {
+    if (cutNonPositiveDependent) { ### minimally viable
+        mc <- mc[y>0]
+        mc <- mc[nmaxpop > 0]
+        mc <- mc[nuvisits12 > 1]
+        #mc <- mc[srv_retired==TRUE]  ### I have to worry about right censoring if I omit this, but I keep over 20% of data
+    } else {
+        mc <- mc[y>=0]
+        mc <- mc[nmaxpop > 0]
+        mc <- mc[nuvisits12 >= 0]
+    }
+    return(mc)
 }
 
 ### Widening
@@ -195,7 +235,8 @@ get_plugin_codes <- function() {
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160805.csv")))
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
     #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv"), stringsAsFactors=FALSE))
-    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160909.csv"), stringsAsFactors=FALSE))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160909.csv"), stringsAsFactors=FALSE))
+    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20170727.csv"), stringsAsFactors=FALSE))
     pcodes <- plugin_codes_byhand
     #pcodes <- pcodes[1:(nrow(pcodes)-1),]
     pcodes[,feat_count:=NULL]
@@ -204,6 +245,8 @@ get_plugin_codes <- function() {
     pcodes$foreign <- with(pcodes, ifelse(is.na(foreign), 0, 1))
     pcodes$gov <- with( pcodes, ifelse(gov_auto==0 | gov_hand==0 | is.na(gov_hand), 0, 1))
     pcodes$blacklist <- with( pcodes, ifelse(!is.na(blacklist) & blacklist == 1,1,0))
+    pcodes$blacklist_justmultiserver <- NULL
+    pcodes$blacklist_inclminigames <- NULL
     pcodes$na <- NULL
     pcodes$foreign <- NULL
     pcodes$gov_auto <- NULL
@@ -243,17 +286,17 @@ get_plugin_codes <- function() {
     gg <- merge( mm1, mm2[,c(1,7:ncol(mm2))], by='feat_code') 
     gg <- asdt(gg)
     ### I removed monitor from here, but i might want it back in t inthe future
-    setnames(gg, c("grief", "ingame", "noresource", "performance", "players", "realmoney", "noaudience", "users", "admin", "enable_forbid_user", "enable_forbid_audience", "noupkeep", "coarseauto", "coarsemanual", "fineauto", "finemanual", "noinstitution", "broadcast", "chat",  "privateproperty", "shop", "action_space", "action_space_up", "action_space_down", "boundary", "monitor_by_peer", "monitor_by_admin", "position_h", "position_v"), c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v"))
-    setcolorder(gg, c("feat_code", "feat_url", "blacklist", "gov", "res_none", "res_grief", "res_ingame", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v"))
+    setnames(gg, c("grief", "ingame", "noresource", "performance", "players", "realmoney", "attention", "noaudience", "users", "admin", "enable_forbid_user", "enable_forbid_audience", "noupkeep", "coarseauto", "coarsemanual", "fineauto", "finemanual", "noinstitution", "broadcast", "chat",  "privateproperty", "shop", "action_space", "action_space_up", "action_space_down", "boundary", "monitor_by_peer", "monitor_by_admin", "position_h", "position_v", "payoff"), c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "res_attention", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff"))
+    setcolorder(gg, c("feat_code", "feat_url", "blacklist", "gov", "res_none", "res_grief", "res_ingame", "res_performance", "res_players", "res_realmoney", "res_attention", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff"))
     ### now merge original columns back into the dmmy variable ones
     gg <- merge(gg, pcodes[,.(feat_code, resource, audience, upkeep, institution)], by='feat_code')
     ### sets of columns are mutually exclusive, making validity tests easy
-    expect_true(all(rowSums(gg[,5:10,with=FALSE]) == 1))
-    expect_true(all(rowSums(gg[,11:13,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,5:11,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,12:14,with=FALSE]) == 1))
     expect_true(all(gg[,actions_user %in% c(-1,0,1)]))
     expect_true(all(gg[,actions_audience %in% c(-1,0,1)]))
-    expect_true(all(rowSums(gg[,16:20,with=FALSE]) == 1))
-    expect_true(all(rowSums(gg[,21:33,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,17:21,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,22:35,with=FALSE]) == 1))
     return(gg )
 }
 
