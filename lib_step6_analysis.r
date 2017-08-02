@@ -97,12 +97,13 @@ filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutN
     ### this should go first, otherwise DataProvision will delete mention of 
     ###  some plugins with blacklist=TRUE and this function will keep servers
     ###  that should have been excluded
-    mc <- filterDataSetDownComparability(mc, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
+	mc <- filterDataSetDownComparability(mc, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
 
     print(c("Filter 1:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
-    mc <- filterDataSetDownDataProvision(mc, featureCountMin=featureCountMin, keepFeatTypes=keepFeatTypes, keepDataSource=keepDataSource)
-
+	if ("feat_source" %in% names(mc)) {
+		mc <- filterDataSetDownDataProvision(mc, featureCountMin=featureCountMin, keepFeatTypes=keepFeatTypes, keepDataSource=keepDataSource) 
+	}
     print(c("Filter 2:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
     mc <- filterDataSetDownViability(mc, cutNonPositiveDependent=cutNonPositiveDependent)
