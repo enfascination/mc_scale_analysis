@@ -14,7 +14,8 @@ expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=max(2, as.integer(n_servers/1000)), keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=25, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
 #writeBlankFeatureCodingTable(mc, paste0(pathData, "plugin_widehandcodes_raw.csv"))
 ### am I missing any plugins or features?
@@ -22,9 +23,9 @@ plugin_codes_byhand <- get_plugin_codes()
 mc[mc$feat_code %ni% plugin_codes_byhand$feat_code, unique(feat_code) ]  ### more things to code and integrate back into get_plugin_codes()
 #cor(plugin_codes_byhand[4:ncol(plugin_codes_byhand)])
 mw <- merge(
-        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "log_plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count")],
+        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "log_plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count", "plugin_specialization")],
         #mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "hierarchy", "property", "chat", "apply", "resource")]
-        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("gov", "res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v")]
+        mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("gov", "res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff")]
         , by="srv_addr", all=T)
 mw <- merge(
         mw,
@@ -36,7 +37,7 @@ mw <- merge(
 #vars_in_nonfeat <- c(c("srv_max_log", "date_ping_int", "weeks_up_todate", 'jubilees'), c("log_plugin_count", "dataset_reddit", "dataset_mcs_org", "aud_none", "use_na", "inst_none" ))
 #vars_in_feat <-  names(mw)[which(names(mw) %ni% c(vars_non_model, vars_out, vars_in_nonfeat))] 
 #vars_in_feat <- c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "estnorm", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", 'loopadmin', 'poly', 'property', 'chat')
-#vars_in_feat <- c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney" , "aud_users", "aud_admin", "actions_user", "actions_audience", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "cat_admintools", "cat_antigrief", "cat_chat", "cat_economy", "cat_informational", "cat_webadmin", "cat_devtools", "cat_fun", "cat_general", "cat_mechanics", "cat_misc", "cat_roleplay", "cat_teleportation", "cat_world", "cat_fixes", "cat_worldgen", "resource", "audience", "upkeep", "institution")
+#vars_in_feat <- c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney" , "aud_users", "aud_admin", "actions_user", "actions_audience", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff", "cat_admintools", "cat_antigrief", "cat_chat", "cat_economy", "cat_informational", "cat_webadmin", "cat_devtools", "cat_fun", "cat_general", "cat_mechanics", "cat_misc", "cat_roleplay", "cat_teleportation", "cat_world", "cat_fixes", "cat_worldgen", "resource", "audience", "upkeep", "institution")
 #interact_xsrv <- as.data.table(mw[,vars_in_feat,with=F][,apply(.SD, 2, function(x) x*mw$srv_max_log )])
 #vars_in_feat_xsrv <- paste("srvmax", vars_in_feat, sep='_')
 #names(interact_xsrv) <- vars_in_feat_xsrv
@@ -48,18 +49,21 @@ mw[,pop_size_factor_fine:=cut(srv_max_log, breaks=25, ordered_result=TRUE, right
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,8,12), labels=c("<4", "4 to 16", "16 to 64", "64 to 256", "\u2265256"), ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
-mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,2,4,6,8), labels=c("0", "0 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
+mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
+#mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,1,2,4,6,8), labels=c("\u22641", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 mw[,':='(res_realworld=res_realmoney+res_performance, res_realmoney=NULL,res_performance=NULL)]
-mw[,sum_institution:=rowSums(.SD[, grep("inst_", names(mw), value=TRUE), with=F ])]
-mw[,sum_resource:=rowSums(.SD[, grep("res_", names(mw), value=TRUE), with=F ])]
+mw[,sum_institution:=rowSums(.SD[, grep("^inst_[^n]", names(mw), value=TRUE), with=F ])]
+mw[,sum_resource:=rowSums(.SD[, grep("^res_[^n]", names(mw), value=TRUE), with=F ])]
 #mw[,sum_res_grief:=colSums(.SD[, grep("res_", names(mw), value=TRUE), with=F ])]
 mw[,paste("sum", grep("^res_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, grep("^res_", names(mw), value=TRUE), with=F], sum)]
 mw[,paste("sum", grep("^inst_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, grep("^inst_", names(mw), value=TRUE), with=F], sum)]
 
 ### add a column measuring the diversity of solutions used by a server
+library(entropy) ### use small-n bias correction, Chao-Shen, which is fast and comparable to NSB  ##  NOOOOOOO: CS is awful: using shirnkage
+entropy_calc <- function(x) {entropy(x, method="ML")}
 entropy_calc <- function(x) {-x*log(x)}
-mw[,srv_entropy:={inst_dist<-.SD[,grep("^inst_", names(mw)),with=FALSE][1]; inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }, by=srv_addr]
+mw[,srv_entropy:={inst_dist<-.SD[,grep("^inst_[^n]", names(mw)),with=FALSE][1]; inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }, by=srv_addr]
 ### split data up
 mc_split <- splitDataTestTrain(mw, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
 mw_train <- mc_split$train
@@ -93,16 +97,17 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
     if (return_plot) {
         mwp1 <- ggplot(mwd1, aes_string(x=xvar, y=yvar))
         if (unscaledyvar) {
-            mwp1 <- mwp1 + scale_y_discrete("Returning members", expand = c(0.035,0))#, labels=c("0", "", "", "10", "", "", "100"))
+            mwp1 <- mwp1 + scale_y_discrete("Core members", expand = c(0.035,0))#, labels=c("0", "", "", "10", "", "", "100"))
         } else {
-            mwp1 <- mwp1 + scale_y_discrete("Returning members", expand = c(0.035,0))
+            mwp1 <- mwp1 + scale_y_discrete("Core members", expand = c(0.035,0))
         }
         mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
         if (ggtext) {
             mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 3)), color="dark grey")
         }
         if (ggrug) {
-            mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
+            #mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
+            mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*1.0+0.99+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
         }
         return(mwp1)
     }
@@ -111,35 +116,129 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
     }
 }
 gov_median <- function(x,i) median(as.double(asdf(x[i])[,1]))
+gov_median_narm <- function(x,i) median(as.double(asdf(x[i])[,1]), na.rm=TRUE)
 gov_mean <- function(x,i) mean(as.double(asdf(x[i])[,1]))
+gov_mean_narm <- function(x,i) mean(as.double(asdf(x[i])[,1]), na.rm=TRUE)
 gov_median_proportion_1 <- function(x,i) median(as.double(asdf(x[i])[,1]/asdf(x[i])[,2]))
+gov_median_proportion_1_narm <- function(x,i) median(as.double(asdf(x[i])[,1]/asdf(x[i])[,2]), na.rm=TRUE)
 gov_mean_proportion_1 <- function(x,i) mean(as.double(asdf(x[i])[,1]/asdf(x[i])[,2]))
 gov_median_proportion_2 <- function(x,i, focal) {
     median( asdf(x[i,focal,with=F])[,1]/rowSums(x[i]) , na.rm=TRUE)
 }
-gov_entropy_diversity <- function(data, i_samp) {
-    entropy_calc_term <- function(x) {-x*log(x)}
-    inst_dist<-colSums(data[i_samp,])
-    inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001)
-    if(nrow(data[i_samp]) < ncol(data[i_samp])) 
-        ent <- numeric()
-    else 
-        ent <- sum(sapply(inst_dist, entropy_calc_term))
-    return(ent )
-}
+gov_max <- function(x,i) max(as.double(asdf(x[i])[,1]))
+gov_var <- function(x,i) var(as.double(asdf(x[i])[,1]))
+gov_var_controlled <- function(x,i) var(rescale(as.double(asdf(x[i])[,1])))
 gov_var_diversity <- function(data, i_samp) {
     samp_size <- ncol(data) ### this is a bit les unproper, but 
-    samp_size <- 3  ### this lets me keep at least one bin in the last column
+    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
     if(nrow(data[i_samp]) < samp_size) {
         diversity <- numeric()
     }
     else {
-        gg <- data[sample(i_samp, samp_size),]
-        gg <- apply(gg, 1, function(x) x/sum(x))
-        inst_vars<-apply(gg, 2, var) ### I'm subsampling within boot to take small samples and thereby control slightly less badly for the different sizes in each bin
+        ### I'm subsampling within boot to take small samples and thereby 
+        ###  control slightly less badly for the different sizes in each bin
+        gg <- data[sample(i_samp, 1000, replace=TRUE),] 
+        gg <- t(apply(gg, 1, function(x) x/sum(x)))  ### turn counts by type into a distribution
+        inst_vars<-apply(gg, 2, var)  
         diversity <- mean(inst_vars)
     }
     return(diversity )
+}
+gov_entropy_diversity <- function(data, i_samp) {
+    samp_size <- ncol(data) ### this is a bit les unproper, but 
+    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
+    #entropy_calc <- function(x) {-x*log(x)}
+    entropy_calc <- function(x) {entropy(x, method="ML")}
+    if(nrow(data[i_samp]) < samp_size) {
+        diversity <- numeric()
+    }
+    else {
+        ### I'm subsampling within boot to take small samples and thereby 
+        ###  control slightly less badly for the different sizes in each bin
+        gg <- data[sample(i_samp, 1000, replace=TRUE),] 
+        gg <- apply(gg, 1, function(x) x/sum(x))  ### turn counts by type into a distribution
+        inst_vars<-apply(gg, 2, entropy_calc)  
+        diversity <- mean(inst_vars, na.rm=TRUE)
+    }
+    return(diversity )
+}
+gov_entropy_diversity2 <- function(data, i_samp) {
+    samp_size <- ncol(data) ### this is a bit les unproper, but 
+    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
+    #entropy_calc <- function(x) {-x*log(x)}
+    #entropy_calc <- function(x) {entropy(x, method="MM")}
+    if(nrow(data[i_samp]) < samp_size) {
+        diversity <- numeric()
+    }
+    else {
+        ### I'm subsampling within boot to take small samples and thereby 
+        ###  control slightly less badly for the different sizes in each bin
+        gg <- data[sample(i_samp, 1000, replace=TRUE),] 
+        #gg <- t(apply(gg, 1, function(x) x/sum(x)))  ### turn counts by type into a distribution
+        gg <- apply(gg, 2, sum)  ### turn each server's distribution into one big bin-wide distribution
+        inst_vars <- gg/(sum(gg)+0.00001)
+        ##inst_vars<-apply(gg, 2, entropy_calc)  
+        ##diversity <- mean(inst_vars)
+        diversity <- entropy_calc(inst_vars)
+    }
+    return(diversity )
+}
+gov_var_diversity2 <- function(data, i_samp) {
+    samp_size <- ncol(data) ### this is a bit les unproper, but 
+    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
+    if(nrow(data[i_samp]) < samp_size) {
+        diversity <- numeric()
+    }
+    else {
+        ### I'm subsampling within boot to take small samples and thereby 
+        ###  control slightly less badly for the different sizes in each bin
+        gg <- data[sample(i_samp, 1000, replace=TRUE),] 
+        gg <- t(apply(gg, 1, function(x) x/sum(x)))  ### turn counts by type into a distribution
+        gg <- apply(gg, 2, sum)  ### turn each server's distribution into one big bin-wide distribution
+        inst_vars <- gg/sum(gg)
+        ##inst_vars<-apply(gg, 2, entropy_calc)  
+        ##diversity <- mean(inst_vars)
+        diversity <- var(inst_vars)
+    }
+    return(diversity )
+}
+#library(devtools)
+#devtools::install_github("tillbe/jsd")
+library(jsd)
+library('proxy')
+gov_dist <- function(data, i_samp) {
+    samp_size <- ncol(data) ### this is a bit les unproper, but 
+    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
+    n <- 10
+    if(nrow(data[i_samp]) < samp_size) {
+        diversity <- numeric()
+    }
+    else {
+        dists <- rep(0, n)
+        for (i in 1:n) {
+            idxs <- sample(i_samp, 2) #i_sampl should come shuffled, but just in case ...
+            #dists[i] <- hamming( data[ idxs[1], ] , data[ idxs[2], ] )
+            #dists[i] <- dist( data[ idxs, ] , method="cosine")
+            #dists[i] <- dist( apply(data[ idxs, ] + 1, 1, prop.table) , method="Kullback")
+            #dists[i] <- dist( data[ idxs, ] , method="Manhattan")
+            dists[i] <- dist( data[ idxs, ] , method="simple matching")
+            #dists[i] <-  data[idxs,] %>% apply(2, diff) %>% abs() %>% sum() ## "taxicab" distance or L1
+            #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% log1p() %>% sum()
+            #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% (function(x){ifelse(x==0,0,1)})() %>% sum()
+        }
+        #diversity <- mean(dists) 
+        diversity <- median(dists) 
+    }
+    return(diversity )
+}
+L1 <- function(d1, d2) {( d1 - d2 ) %>% abs() %>% log1p() %>% sum() %>% return() }
+hamming <- function(d1, d2) {(d1 - d2) %>% abs() %>% (function(x){ifelse(x==0,0,1)})() %>% sum() %>% return() }
+logL1 <- function(d1, d2) {( d1 - d2 ) %>% abs() %>% log1p() %>% sum() %>% return() }
+SJD <- function(d1, d2) {JSD( d1, d2 )^0.5 %>% return() }
+cosine_dist <- function(d1, d2) {
+    d1l <- (d1*d1) %>% sum() %>% sqrt()
+    d2l <- (d2*d2) %>% sum() %>% sqrt()
+    return( sum( d1 * d2 )/(d1l * d2l ) ) 
 }
 
 ### mere data density
@@ -147,7 +246,8 @@ gov_var_diversity <- function(data, i_samp) {
 plot_srv_density <- plot_srv_density + guides(fill="none")
 ggsave(plot_srv_density, file=paste0(pathImages, "plot_srv_density.png"), units='cm', width=3.25, height=2.5, scale=3)
 # plot hazard  log and linear
-(plot_srv_hazard_bar1 <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_bar(stat="identity") + theme_bw() + scale_y_continuous("Count") + xlab("Longevity (weeks)") )
+(plot_srv_hazard_bar1 <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_bar(stat="identity") + theme_bw() + scale_y_log10("Count") + xlab("Longevity (weeks)") )
+median( mw_train$weeks_up_total)
 (plot_srv_hazard_bar2 <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total, pop_size_factor)], aes(x=weeks_up_total, y=longevity_count, fill=pop_size_factor )) + geom_bar(stat="identity", position="dodge") + theme_bw() + scale_y_continuous("Count") + xlab("Longevity (weeks)") )
 (plot_srv_hazard <- make_plot_size_by_success(mw_train, "weeks_up_total", gov_median, ggmore=scale_fill_gradient(high="#3182bd", low="#cccccc"), ggguide="none", reps=1000 ) )
 ggsave(plot_srv_hazard, file=paste0(pathImages, "plot_srv_hazard.png"), units='cm', width=3.25, height=2.5, scale=3)
@@ -160,22 +260,27 @@ ggel_gov <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", m
 ggel_gov_prop <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.5, breaks=seq(from=0,to=1,by=0.2)) 
 ggel_gov_rat <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.10) 
 ggel_gov_rat_within <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59") 
-(plot_gov_scaling <- make_plot_size_by_success(mw_train, "gov", gov_median , ggmore=ggel_gov, ggguide="none", reps=1000))
+(plot_gov_scaling <- make_plot_size_by_success(mw_train, "gov", gov_mean , ggmore=ggel_gov, ggguide="none", reps=1000))
+(plot_gov_specialization <- make_plot_size_by_success(mw_train, "plugin_specialization", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
 (plot_gov_scaling_ratio <- make_plot_size_by_success(mw_train, c("gov","plugin_count"), gov_median_proportion_1, ggmore=ggel_gov_rat, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100))
+(plot_gov_scaling_ratio_antigrief <- make_plot_size_by_success(mw_train, c("res_grief","sum_resource"), gov_median_proportion_1_narm, ggmore=ggel_gov_rat, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100))
 ggsave(plot_gov_scaling, file=paste0(pathImages, "plot_gov_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
+ggsave(plot_gov_specialization, file=paste0(pathImages, "plot_gov_specialization.png"), units='cm', width=3.25, height=2.5, scale=3)
 
 ### resource managemanet style by size:
-(plot_gov_scaling_by_plugin_category <- make_plot_size_by_success(melt(mw_train[gov>0], id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio", "sum_resource"),  measure.vars = c(grep("^cat_", names(mw_train), value=TRUE)), variable.name = 'resource', value.name='resource_count'), c("resource_count"), gov_median , ggmore=ggel_gov, ggguide=guide_legend("Governance\nplugins", reverse=TRUE), reps=10, facetting=c("resource")) + facet_wrap( ~ resource, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
+(plot_gov_scaling_by_plugin_category <- make_plot_size_by_success(melt(mw_train[gov>0], id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio", "sum_resource"),  measure.vars = c(grep("^cat_", names(mw_train), value=TRUE)), variable.name = 'resource', value.name='resource_count'), c("resource_count"), gov_mean , ggmore=ggel_gov, ggguide=guide_legend("Governance\nplugins", reverse=TRUE), reps=10, facetting=c("resource")) + facet_wrap( ~ resource, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
 #(plot_gov_scaling_by_resource_type_across_proportion <- make_plot_size_by_success(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio", "sum_resource"),  measure.vars = c("gov", "res_grief", "res_ingame", "res_realworld", "res_players"), variable.name = 'resource', value.name='resource_count', variable.factor=FALSE), c("resource_count", "sum_resource"), gov_median_proportion_1 , ggmore=ggel_gov_rat, ggguide=guide_legend("% governance\nplugins", reverse=TRUE), reps=100, facetting=c("resource")) + facet_wrap( ~ resource, ncol=2)+ theme(strip.background=element_rect(color="white", fill="white")))
 ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91cf60", l=100, c=100), high=muted("#fc8d59", l=100, c=100)))(rescale(seq(from=0,to=10,by=2))), values=rescale(seq(from=0,to=10,by=2)^2)) 
 #scale_fill_gradientn(colors=grey(seq(from=0.6,to=0.3,length.out=6)), values=rescale(c(0,4,16,64,256,1024)), breaks=c(0,4,16,64,256,1024))
 {
     gg <- melt(mw_train[gov>0], id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio", "sum_resource"),  measure.vars = c("res_grief", "res_ingame", "res_realworld", "res_players"), variable.name = 'resource', value.name='resource_count', variable.factor=FALSE)
-    gg[,resource:=factor(resource, levels=c("res_grief", "res_ingame", "res_realworld", "res_players"), labels=c("Grief", "In-game", "Real-world", "Player community"))]
+    gg[,resource:=factor(resource, levels=c("res_grief", "res_ingame", "res_realworld", "res_players", "res_attention"), labels=c("Grief", "In-game", "Real-world", "Player community", "Mod cognitive"))]
     (plot_gov_scaling_by_resource_type <- make_plot_size_by_success(gg, c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000, facetting=c("resource")) + facet_wrap( ~ resource, ncol=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
     ggsave(plot_gov_scaling_by_resource_type, file=paste0(pathImages, "plot_gov_scaling_by_resource_type.png"), units='cm', width=2.25, height=5, scale=3)
-    #(plot_antigrief_scaling <- make_plot_size_by_success(gg[resource=="Grief"], c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
-    #ggsave(plot_antigrief_scaling, file=paste0(pathImages, "plot_antigrief_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
+    (plot_antigrief_scaling <- make_plot_size_by_success(gg[resource=="Grief"], c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
+    (plot_antigrief_ratio_scaling <- make_plot_size_by_success(gg[resource=="Grief",.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
+(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
+    ggsave(plot_antigrief_scaling, file=paste0(pathImages, "plot_antigrief_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
 }
 ### institution by size:
 {
@@ -192,13 +297,14 @@ ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91
 ### institution by size as a fraction of within that type of institution
 ###   but this ultimately gives less info that the original clacuclation, and less valuable, so back to original/
 #dataa <- make_plot_size_by_success(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio", "sum_institution"),  measure.vars = c("gov", grep("^inst_", names(mw_train), value=TRUE)), variable.name = 'institution', value.name='institution_count'), c("institution_count","sum_institution"), gov_mean_proportion_1, reps=0, facetting=c("institution"), return_plot=FALSE)[,pop_var:=pop_var/sum(pop_var),by=institution]
-#(plot_gov_scaling_by_inst_type_proportion <- ggplot(dataa[,.(xvar=pop_size_factor_coarse, yvar=perf_factor,institution, pop_var)], aes(x=xvar, y=yvar)) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend("% governance\nplugins", reverse=TRUE)) + ggel_gov_rat_within + facet_wrap( ~ institution, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
+#(plot_gov_scaling_by_inst_type_proportion <- ggplot(dataa[,.(xvar=pop_size_factor_coarse, yvar=perf_factor,institution, pop_var)], aes(x=xvar, y=yvar)) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend("% governance\nplugins", reverse=TRUE)) + ggel_gov_rat_within + facet_wrap( ~ institution, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
 ### governance audience
 ggel_govaud <- scale_fill_gradient2(low="#91cf60", mid="#f0f0f0", high="#fc8d59", midpoint=3 )
-(plot_gov_scaling_by_aud_type <- make_plot_size_by_success(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio"),  measure.vars = c(grep("^aud_[^n]", names(mw_train), value=TRUE)), variable.name = 'audience', value.name='audience_count'), "audience_count", gov_median , ggmore=ggel_govaud, ggguide=guide_legend("Governance\nplugins", reverse=TRUE), reps=0, facetting=c("audience")) + facet_wrap( ~ audience, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
+(plot_gov_scaling_by_aud_type <- make_plot_size_by_success(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio"),  measure.vars = c(grep("^aud_[^n]", names(mw_train), value=TRUE)), variable.name = 'audience', value.name='audience_count'), "audience_count", gov_mean , ggmore=ggel_govaud, ggguide=guide_legend("Governance\nplugins", reverse=TRUE), reps=0, facetting=c("audience")) + facet_wrap( ~ audience, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
 ggel_govaud2 <- scale_fill_gradient(low="#f0f0f0", high=muted("#fc8d59", l=80,c=100))
-(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_median_proportion_1, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
-ggsave(plot_gov_scaling_by_aud_type2, file=paste0(pathImages, "plot_gov_scaling_by_aud_type2.png"), units='cm', width=4, height=2.5, scale=3)
+(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
+#ggsave(plot_gov_scaling_by_aud_type2, file=paste0(pathImages, "plot_gov_scaling_by_aud_type2.png"), units='cm', width=4, height=2.5, scale=3)
+ggsave(plot_gov_scaling_by_aud_type, file=paste0(pathImages, "plot_gov_scaling_by_aud_type.png"), units='cm', width=4, height=2.5, scale=3)
 
 
 ### proportion of users in small servers
@@ -208,7 +314,7 @@ ggsave(plot_gov_scaling_by_aud_type2, file=paste0(pathImages, "plot_gov_scaling_
 dat <- rbind(  mw_train[,.(vtype=0, y=sum(nuvisits12)), by=pop_size_factor]
              , mw_train[,.(vtype=1, y=sum(y)), by=pop_size_factor]
              )
-dat[, vtype:=factor(vtype, levels=c(0,1), labels=c("Unique visitors", "Return visitors"), ordered=TRUE)]
+dat[, vtype:=factor(vtype, levels=c(0,1), labels=c("Unique visitors", "Core visitors"), ordered=TRUE)]
 setnames(dat, c("y","pop_size_factor"), c("count", "category"))
 dat <- dat[order(vtype,category)]
 dat[,fraction:=count/sum(count),by=vtype]
@@ -293,9 +399,10 @@ ggsave(plot_srv_density_uvisits, file=paste0(pathImages, "plot_srv_density_uvisi
 ### server diversity
 ### bootstrapping fucntion for entropy
 ggel_lowbad <- scale_fill_gradient(high="#41ab5d", low="#cccccc") 
-(make_plot_size_by_success(mw_train, grep("^inst_", names(mw_train), value=TRUE), gov_entropy_diversity, ggguide=guide_legend("Entropy"), ggmore=ggel_lowbad, reps=100))
-(plot_srv_institutional_diversity <- (make_plot_size_by_success(mw_train, grep("^inst_", names(mw_train), value=TRUE), gov_var_diversity, ggguide=guide_legend("Variability"), ggmore=ggel_lowbad, reps=1000, ggtext=FALSE)))
+#(make_plot_size_by_success(mw_train, grep("^inst_[^n]", names(mw_train), value=TRUE), gov_entropy_diversity, ggguide=guide_legend("Entropy"), ggmore=ggel_lowbad, reps=10))
+(plot_srv_institutional_diversity <- (make_plot_size_by_success(mw_train, grep("^inst_[^n]", names(mw_train), value=TRUE), gov_dist, ggguide=guide_legend("Variability"), ggmore=ggel_lowbad, reps=10, ggtext=FALSE)))
 ggsave(plot_srv_institutional_diversity, file=paste0(pathImages, "plot_srv_institutional_diversity.png"), units='cm', width=4, height=2.5, scale=3)
+#ggsave(plot_srv_institutional_diversity, file=paste0(pathImages, "plot_srv_institutional_diversity_entropy.png"), units='cm', width=4, height=2.5, scale=3)
 
 ### within-server diversity
 (make_plot_size_by_success(mw_train, "srv_entropy", gov_median, ggmore=ggel_lowbad, ggguide=guide_legend("Pluralism", reverse=TRUE), reps=10))
@@ -345,6 +452,7 @@ pred_hist[ ,':='(
                    ifelse( gov==1 & institution == "monitor_by_admin", "Admin monitoring", .) %>%
                    ifelse( gov==1 & institution == "position_v", "More groups, vertical", .) %>%
                    ifelse( gov==1 & institution == "position_h", "More groups, horizontal", .) %>%
+                   ifelse( gov==1 & institution == "payoff", "Incentives", .) %>%
                    factor(levels=c( "Communication", "Private property", "Economy", "More player actions", "Entry restrictions", "Fewer player actions", "Admin broadcast", "Peer monitoring", "Admin monitoring", "More groups, vertical", "More groups, horizontal", "Other gov", "Misc"))
                    }, 
                 resource_name={
@@ -392,13 +500,13 @@ ggsave(plot_gov_count, file=paste0(pathImages, "plot_gov_count.png"), units='cm'
 ggsave(plot_gov_relative, file=paste0(pathImages, "plot_gov_relative.png"), units='cm', width=2.25, height=1, scale=6)
 
 ### governance against size against community
-(plot_gov_scaling <- ggplot(mw_train[,.(gov=median(gov)),by=.(perf_factor, pop_size_factor_coarse)], aes(x=pop_size_factor_coarse, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=2.5, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)))
-(plot_gov_scaling_by_resource_type <- ggplot(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "perf_factor"),  measure.vars = c("gov", "res_grief", "res_ingame", "res_realworld", "res_players"), variable.name = 'resource', value.name='resource_count')[,.(gov=median(resource_count)),by=.(resource, perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=1, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0), strip.background=element_rect(color="white", fill="white")) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)) + facet_wrap( ~ resource, ncol=1))
-(plot_gov_scaling_by_inst_type <- ggplot(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "perf_factor"),  measure.vars = c("gov", grep("^inst_", names(mw_train), value=TRUE)), variable.name = 'institution', value.name='institution_count')[,.(gov=median(institution_count)),by=.(institution, perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=1, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0), strip.background=element_rect(color="white", fill="white")) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)) + facet_wrap( ~ institution, ncol=4))
+(plot_gov_scaling <- ggplot(mw_train[,.(gov=median(gov)),by=.(perf_factor, pop_size_factor_coarse)], aes(x=pop_size_factor_coarse, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=2.5, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)))
+(plot_gov_scaling_by_resource_type <- ggplot(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "perf_factor"),  measure.vars = c("gov", "res_grief", "res_ingame", "res_realworld", "res_players"), variable.name = 'resource', value.name='resource_count')[,.(gov=mean(resource_count)),by=.(resource, perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=1, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0), strip.background=element_rect(color="white", fill="white")) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)) + facet_wrap( ~ resource, ncol=1))
+(plot_gov_scaling_by_inst_type <- ggplot(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "perf_factor"),  measure.vars = c("gov", grep("^inst_", names(mw_train), value=TRUE)), variable.name = 'institution', value.name='institution_count')[,.(gov=mean(institution_count)),by=.(institution, perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=gov)) + scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=1, breaks=seq(from=0,to=12,by=2)) + theme_bw() + theme(panel.grid.major=element_line(0), strip.background=element_rect(color="white", fill="white")) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Governance\nplugins", reverse=TRUE)) + facet_wrap( ~ institution, ncol=4))
 ### resource managemanet style by size:
-ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = c("res_grief", "res_ingame", "res_realworld", "res_players"), variable.name = 'resource', value.name='resource_count'),aes(x=srv_max, y=resource_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~resource, ncol=2) 
+ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = c("res_grief", "res_ingame", "res_realworld", "res_players", "res_attention"), variable.name = 'resource', value.name='resource_count'),aes(x=srv_max, y=resource_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~resource, ncol=2) 
 ### institution by size:
-ggplot(data=melt(training_full_lasso, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = grep("^inst_", names(training_full_lasso)), variable.name = 'institution', value.name='institution_count'),aes(x=srv_max, y=institution_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~institution, ncol=2) 
+ggplot(data=melt(mw_train, id.vars = c("srv_addr", "srv_max", "y"),  measure.vars = grep("^inst_", names(mw_train)), variable.name = 'institution', value.name='institution_count'),aes(x=srv_max, y=institution_count)) + geom_jitter(size=0.1, height=0.1, width=0.1) + scale_x_log10() + geom_smooth(method='rlm') + facet_wrap(~institution, ncol=2) 
 ggsave(plot_gov_scaling, file=paste0(pathImages, "plot_gov_scaling.png"), units='cm', width=2.25, height=1, scale=6)
 
 
@@ -417,24 +525,24 @@ ggplot(plot_diversity_data, aes(x=srv_max, y=srv_entropy)) + geom_point() + scal
 (plot_diversity <- ggplot(plot_diversity_data2, aes(x=pop_size_factor, y=pop_entropy)) + geom_bar(stat='identity') + geom_smooth() + xaxis_size_factor + scale_y_continuous("Population-level diversity in governance style") + theme_bw()   )
 #  now bootstrap the stat
 gov_diversity <- function(data, i_samp) {
-    entropy_calc_term <- function(x) {-x*log(x)}
+    entropy_calc <- function(x) {-x*log(x)}
     inst_dist<-colSums(data[i_samp,])
     inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001)
-    return(sum(sapply(inst_dist, entropy_calc_term)) )
+    return(sum(sapply(inst_dist, entropy_calc)) )
 }
 plot_diversity_data4 <- mw_train[,{ttt <- boot(.SD[,c(grep("^inst_", names(.SD))), with=F], gov_diversity,  R=1000, parallel = "multicore", ncpus = 8); 
                                  tttq <- unlist(quantile(ttt$t, c(0.99, 0.50, 0.01)))
                                  list(pop_entropy=tttq[2], pop_entropy_low=tttq[3], pop_entropy_high=tttq[1])
 },by=pop_size_factor_fine]
 (plot_diversity <- ggplot(plot_diversity_data4, aes(x=pop_size_factor_fine, y=pop_entropy)) + geom_bar(stat='identity') + geom_smooth() + scale_x_discrete("Server size", labels=c("(0,5]", "(5,10]", "(10, 50]", "(50,100]", "(100, 500]", "(500, 1000]"))) + scale_y_continuous("Population-level diversity in governance style") + theme_bw() + coord_cartesian(ylim=c(1.5, 2.5)) + geom_errorbar(aes(ymin = pop_entropy_low, ymax = pop_entropy_high))
-(plot_diversity_scaling <- ggplot(mw_train[,.(pop_entropy={inst_dist<-colSums(.SD[,grep("^inst_", names(mw_train)),with=FALSE]); inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, function(x) {-x*log(x)})) }),by=.(perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=pop_entropy)) + scale_fill_gradient2(high="#91cf60", mid="#ffffbf", low="#fc8d59", midpoint=1.2) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Entropy", reverse=TRUE)))
+(plot_diversity_scaling <- ggplot(mw_train[,.(pop_entropy={inst_dist<-colSums(.SD[,grep("^inst_", names(mw_train)),with=FALSE]); inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, function(x) {-x*log(x)})) }),by=.(perf_factor, pop_size_factor)], aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=pop_entropy)) + scale_fill_gradient2(high="#91cf60", mid="#ffffbf", low="#fc8d59", midpoint=1.2) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Entropy", reverse=TRUE)))
 plot_diversity_scaling_boot_data <- mw_train[,.(pop_entropy={
                 ttt <- boot(.SD[,c(grep("^inst_", names(.SD))), with=F], gov_diversity,  R=1000, parallel = "multicore", ncpus = 8); 
                 tttq <- unlist(quantile(ttt$t, c(0.99, 0.50, 0.01), names=FALSE));
                 #list(pop_entropy=tttq[2], pop_entropy_low=tttq[3], pop_entropy_high=tttq[1])
                 tttq[2]
 }),by=.(perf_factor, pop_size_factor)]
-(plot_diversity_scaling_bootstrapped <- ggplot(plot_diversity_scaling_boot_data, aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=pop_entropy)) + scale_fill_gradient2(high="#91cf60", mid="#ffffbf", low="#fc8d59", midpoint=1.2) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Returning members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Entropy", reverse=TRUE)))
+(plot_diversity_scaling_bootstrapped <- ggplot(plot_diversity_scaling_boot_data, aes(x=pop_size_factor, y=perf_factor)) + geom_bin2d(aes(fill=pop_entropy)) + scale_fill_gradient2(high="#91cf60", mid="#ffffbf", low="#fc8d59", midpoint=1.2) + theme_bw() + theme(panel.grid.major=element_line(0)) + scale_y_discrete("Core members", labels=c("0", "", "", "10", "", "", "100")) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", labels=c(5,10,50,100,500,1000)) + guides(fill=guide_legend(title="Entropy", reverse=TRUE)))
 
 
 
