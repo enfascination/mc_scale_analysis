@@ -76,46 +76,60 @@ ggel_gov <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", m
 ggel_gov_prop <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.5, breaks=seq(from=0,to=1,by=0.2)) 
 ggel_gov_rat <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.10) 
 ggel_gov_rat_within <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59") 
-# RESULTS FROM THE GOV-RELATED 5000
+ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91cf60", l=100, c=100), high=muted("#fc8d59", l=100, c=100)))(rescale(seq(from=0,to=10,by=2))), values=rescale(seq(from=0,to=10,by=2)^2)) 
 
+# RESULTS FROM THE GOV-RELATED 5000
 ### PLOT COLLECTIVE ACTION PROBLEM EMERGENCE
 # make 2x3 plot: 
 # show the three types of resource problems changing count and also frequency 
 for (i in 1:3){
-	print(plot_gov_resources <- make_plot_size_by_success(mw, c("res_grief","res_realworld", "res_ingame")[i], gov_mean, ggmore=ggel_gov, ggguide=guide_legend("Mean plugin count", reverse=TRUE), reps=100))
-	print(plot_gov_resources_ratio <- make_plot_size_by_success(mw, c("res_grief","res_realworld", "res_ingame"), gov_mean_proportion_2, focal=i, ggmore=ggel_gov_rat, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100))
+	print(plot_gov_resources <- make_plot_size_by_success(mw, c("res_grief", "res_ingame","res_realworld")[i], gov_mean, ggmore=ggel_gov, ggguide=guide_legend("Mean plugin count", reverse=TRUE), reps=100))
+	print(plot_gov_resources_ratio <- make_plot_size_by_success(mw, c("res_grief", "res_ingame","res_realworld"), gov_mean_proportion_2, focal=i, ggmore=ggel_gov_rat, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100))
 }
+
 ### NOW REDO IN ONE SPECIALIST DATATABLE
-{
-	mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_realworld, res_ingame)]
-	## this gives NAs if there are no res_ plguins in any category. so it goes.
-	mwres[,':='(total_res=sum(res_grief, res_realworld, res_ingame), pct_grief=sum(res_grief)/sum(res_grief, res_realworld, res_ingame), pct_realworld=sum(res_realworld)/sum(res_grief, res_realworld, res_ingame), pct_ingame=sum(res_ingame)/sum(res_grief, res_realworld, res_ingame)),by=.(srv_addr)]
-	mwres[,':='(sanity_pct=sum(pct_grief, pct_realworld, pct_ingame)),by=.(srv_addr)]
-	#(plot_gov_res <- make_plot_size_by_success(mwres, "res_grief", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
-	#(plot_gov_res <- make_plot_size_by_success(mwres, "pct_grief", gov_mean_narm , ggmore=ggel_gov_rat, ggguide="none", reps=1000))
-	### institution by size:
-	gg <- melt(mwres, id.vars = c("srv_addr", "srv_max", "pop_size_factor", "perf_factor", "total_res"),  measure.vars = patterns("^res_", "^pct_"), variable.name = 'resourcegov', value.name='resourcegov_count', variable.factor=FALSE)
-	setnames(gg, c('resourcegov_count1', 'resourcegov_count2'), c('resourcegov_count', 'resourcegov_pct'))
-	gginclude <- c("res_grief", "res_realworld", "res_ingame")
-	#gg <- gg[resourcegov %in% gginclude]
-	gg[,resourcegov:=factor(resourcegov, levels=1:3, labels=c("Antisociality", "Physical resources", "Virtual resources"))] ### patterns() erases old names with integers that have to be replaced with a leap of faith
-	print(plot_resourcegov <- make_plot_size_by_success(gg, c("resourcegov_count"), gov_mean_narm, ggmore=ggel_gov_by_type, ggguide="none", reps=1000, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
-	print(plot_resourcegov_pct <- make_plot_size_by_success(gg, c("resourcegov_pct"), gov_mean_narm , ggmore=ggel_gov_by_type, ggguide="none", reps=1000, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
-	#(plot_actiondown_scaling <- make_plot_size_by_success(gg[resourcegov == "Proscriptions"], c("institution_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
-	ggsave(plot_resourcegov, file=paste0(pathImages, "plot_resourcegov.png"), units='cm', width=4.25, height=2.5, scale=3)
-	ggsave(plot_resourcegov_pct, file=paste0(pathImages, "plot_resourcegov_pct.png"), units='cm', width=4.25, height=2.5, scale=3)
-}
+mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_ingame, res_realworld)]
+## this gives NAs if there are no res_ plguins in any category. so it goes.
+mwres[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld)),by=.(srv_addr)]
+mwres[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld)),by=.(srv_addr)]
+#(plot_gov_res <- make_plot_size_by_success(mwres, "res_grief", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
+#(plot_gov_res <- make_plot_size_by_success(mwres, "pct_grief", gov_mean_narm , ggmore=ggel_gov_rat, ggguide="none", reps=1000))
+### institution by size:
+gg <- melt(mwres, id.vars = c("srv_addr", "srv_max", "pop_size_factor", "perf_factor", "total_res"),  measure.vars = patterns("^res_", "^pct_"), variable.name = 'resourcegov', value.name='resourcegov_count', variable.factor=FALSE)
+setnames(gg, c('resourcegov_count1', 'resourcegov_count2'), c('resourcegov_count', 'resourcegov_pct'))
+gginclude <- c("res_grief", "res_ingame", "res_realworld")
+#gg <- gg[resourcegov %in% gginclude]
+gg[,resourcegov:=factor(resourcegov, levels=1:3, labels=c("Antisociality", "Physical resources", "Virtual resources"))] ### patterns() erases old names with integers that have to be replaced with a leap of faith
+print(plot_resgov <- make_plot_size_by_success(gg, c("resourcegov_count"), gov_mean_narm, ggmore=ggel_gov_by_type, ggtext=FALSE, reps=10, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
+print(plot_resgov_pct <- make_plot_size_by_success(gg, c("resourcegov_pct"), gov_mean_narm , ggmore=ggel_gov_rat, ggtext=FALSE, reps=0, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
+#(plot_actiondown_scaling <- make_plot_size_by_success(gg[resourcegov == "Proscriptions"], c("institution_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
+ggsave(plot_resgov, file=paste0(pathImages, "plot_resgov.png"), units='cm', width=4.25, height=2.5, scale=3)
+ggsave(plot_resgov_pct, file=paste0(pathImages, "plot_resgov_pct.png"), units='cm', width=4.25, height=2.5, scale=3)
 
 ### PLOT COLLECTIVE ACTION PROBLEM EMERGENCE (BETTER)
 # then make the same pot, witht e bottom row combined into one color coded RGB plot like in that poker paper
+data_resgov_spectrum <- mwres[,.(pct_grief=mean(pct_grief,na.rm=T),pct_ingame=mean(pct_ingame,na.rm=T),pct_realworld=mean(pct_realworld,na.rm=T)),by=.(perf_factor, pop_size_factor)]
+expect_true( all( round( data_resgov_spectrum$pct_grief + data_resgov_spectrum$pct_ingame + data_resgov_spectrum$pct_realworld, 3) == 1)) ### sanity check (round to taking care of ugly floats)
+data_resgov_spectrum[,color_res:=rgb(pct_grief, 0.35+pct_ingame*0.65, 0.35+pct_realworld*0.65, 1)]
+color_res <- data_resgov_spectrum$color_res
+names(color_res) <- color_res
+#plot_resgov_spectrum<-ggplot(data_resgov_spectrum, aes(pop_size_factor, perf_factor)) + geom_bin2d(aes(fill=color_res)) + theme_bw() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) +     scale_fill_manual(values = color_res )+ scale_y_discrete("Core members", expand = c(0.035,0)) + guides(fill="none"); plot_resgov_spectrum
+(plot_resgov_spectrum <- make_plot_size_by_success(data_resgov_spectrum, c("color_res"), as.character, ggmore=scale_fill_manual(values = color_res ), ggtext=FALSE, reps=0, ggguide="none", ggrug=FALSE) + full_data_rug) 
+ggsave(plot_resgov_spectrum, file=paste0(pathImages, "plot_resgov_spectrum.png"), units='cm', width=4.25, height=2.5, scale=3)
+
+
 
 # PLOT GOV COMPLEXITY
 # plot the three "complexity"results together: intensity, centralization, diversity within 
 (plot_gov_scaling <- make_plot_size_by_success(mw, "gov", gov_mean , ggmore=ggel_gov, ggguide="none", reps=1000))
 (plot_gov_specialization <- make_plot_size_by_success(mw, "plugin_specialization", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
+# PLOT GOV INTENSITY
 ggsave(plot_gov_scaling, file=paste0(pathImages, "plot_gov_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
+# PLOT GOV SPECIALIZATION
 ggsave(plot_gov_specialization, file=paste0(pathImages, "plot_gov_specialization.png"), units='cm', width=3.25, height=2.5, scale=3)
 (plot_srv_institutional_diversity <- make_plot_size_by_success(mw, "srv_entropy", gov_mean_narm, ggmore=ggel_lowbad, ggguide=guide_legend("Rule Diversity", reverse=TRUE), reps=10, ggrug=FALSE) + full_data_rug)
+# PLOT GOV CENTRALIZATION
+# PLOT GOV COMPLEXITY
 ggsave(plot_srv_institutional_diversity, file=paste0(pathImages, "plot_srv_institutional_diversity.png"), units='cm', width=4, height=2.5, scale=3)
 
 
