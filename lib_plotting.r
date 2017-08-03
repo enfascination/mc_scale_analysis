@@ -28,7 +28,7 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
         }
         mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
         if (ggtext) {
-            mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 3)), color="dark grey")
+            mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 2)), color="dark grey")
         }
         if (ggrug) {
             #mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
@@ -150,7 +150,11 @@ gov_mean_proportion_1 <- function(x,i) mean(as.double(asdf(x[i])[,1]/asdf(x[i])[
 gov_median_proportion_2 <- function(x,i, focal) {
     median( asdf(x[i,focal,with=F])[,1]/rowSums(x[i]) , na.rm=TRUE)
 }
+gov_mean_proportion_2 <- function(x,i, focal) {
+    mean( asdf(x[i,focal,with=F])[,1]/rowSums(x[i]) , na.rm=TRUE)
+}
 gov_max <- function(x,i) max(as.double(asdf(x[i])[,1]))
+gov_sum <- function(x,i) sum(as.double(asdf(x[i])[,1]))
 gov_var <- function(x,i) var(as.double(asdf(x[i])[,1]))
 gov_var_controlled <- function(x,i) var(rescale(as.double(asdf(x[i])[,1])))
 gov_var_diversity <- function(data, i_samp) {
@@ -225,3 +229,5 @@ cosine_dist <- function(d1, d2) {
     d2l <- (d2*d2) %>% sum() %>% sqrt()
     return( sum( d1 * d2 )/(d1l * d2l ) ) 
 }
+euclidian <- function(d1, d2) {sum((d1 - d2)^2)^0.5 %>% return() }
+minkowski <- function(d1, d2, p) {sum(abs(d1 - d2)^p)^(1/p) %>% return() }

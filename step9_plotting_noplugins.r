@@ -22,10 +22,11 @@ mc <- buildPickDependent(spings, dependent='ncomm4visits')
 mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=FALSE, featureCountMin=0)
 mw <- mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "keyword_count", "tag_count", "sign_count")]
 
-# ENRICH FOR PLOTTING
+# ENRICH FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256", ">256"), ordered_result=TRUE, right=TRUE)]
-# ONLLY FOR PLOTTING:
+mw[,yrug:=(log2(ifelse(y>150, 150, y)+1)+1.0)*1.0+rnorm(nrow(.SD),sd=0.02)]
+mw[,xrug:=(log2(srv_max+1)+1.0)*0.25+rnorm(nrow(.SD),sd=0.02)]
 
 # SAMPLING
 mc_split <- splitDataTestTrain(mw, proportions=c(0.2, 0.8), validation_set=FALSE)
@@ -36,11 +37,6 @@ mw_full <- mw
 ### MAIN DATASET
 #mw <- mw_full
 mw <- mw_train
-
-
-### COLUMNS FOR PLOTTING
-mw[,yrug:=(log2(ifelse(y>150, 150, y)+1)+1.0)*1.0+rnorm(nrow(.SD),sd=0.02)]
-mw[,xrug:=(log2(srv_max+1)+1.0)*0.25+rnorm(nrow(.SD),sd=0.02)]
 
 # PLOTS:
 # RESULTS FROM THE FULL 50000: (80000!)
