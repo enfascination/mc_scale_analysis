@@ -104,6 +104,7 @@ if (remake_visits_data) {
             #comile list of all players in that week
             #take the intersections of the sets of players for a sliding window of four weeks over all data for all servers
             #output size of that set and thefirst week of that month
+	     ### and in the event that a server was down for a week weeks and i didn't get data, just code that week as zero conservatively.
     pvisits <- dbGetQuery(con, "SELECT server, uid, year, week FROM playersweeks")
     pvisits <- data.table(pvisits)
     setkey(pvisits, server, year, week)
@@ -162,16 +163,17 @@ xx <- dbSendQuery(con, "DROP TABLE IF EXISTS serversweeks_community")
 
 
 ### find the best week for each metric
+### in the case that ncommmax IS NULL, mostly things are fine, but it happens sometime if a server was on and off over time, in which case its important to order values right so badness doesn't get randomized in to the data.
 xx <- dbSendQuery(con, "ALTER TABLE serversweeks ADD COLUMN bestweek4visits BOOLEAN DEFAULT NULL")
 xx <- dbSendQuery(con, paste0("WITH bestweek AS (SELECT DISTINCT ON (server) *, '4regvisits'::VARCHAR AS besttype, ncommmax = ncomm4visits AS bestweek 
                                            FROM ( SELECT *, MAX(ncomm4visits) OVER (PARTITION BY server ORDER BY year, week) AS ncommmax FROM serversweeks
-                                           ) AS inner1 WHERE ncommmax = ncomm4visits OR ncommmax IS NULL ORDER BY server, RANDOM())
+                                           ) AS inner1 WHERE ncommmax = ncomm4visits OR ncommmax IS NULL ORDER BY server, ncommmax DESC NULLS LAST, RANDOM())
                         UPDATE serversweeks AS sw SET (bestweek4visits) = (bestweek.bestweek) FROM bestweek
                         WHERE sw.server = bestweek.server AND sw.year = bestweek.year AND sw.week = bestweek.week"))
 xx <- dbSendQuery(con, "ALTER TABLE serversweeks ADD COLUMN bestweek30visits BOOLEAN DEFAULT FALSE")
 xx <- dbSendQuery(con, paste0("WITH bestweek AS (SELECT DISTINCT ON (server) *, '30visits'::VARCHAR AS besttype, ncommmax = ncomm30visits AS bestweek 
                                            FROM ( SELECT *, MAX(ncomm30visits) OVER (PARTITION BY server ORDER BY year, week) AS ncommmax FROM serversweeks
-                                           ) AS inner1 WHERE ncommmax = ncomm30visits OR ncommmax IS NULL ORDER BY server, RANDOM())
+                                           ) AS inner1 WHERE ncommmax = ncomm30visits OR ncommmax IS NULL ORDER BY server, ncommmax DESC NULLS LAST, RANDOM())
                         UPDATE serversweeks AS sw SET (bestweek30visits) = (bestweek.bestweek) FROM bestweek
                         WHERE sw.server = bestweek.server AND sw.year = bestweek.year AND sw.week = bestweek.week"))
 
@@ -182,7 +184,7 @@ xx <- dbSendQuery(con, paste0("WITH bestweek AS (SELECT DISTINCT ON (server) *, 
         ### take previous at the level of the server and flip bit for the highest week
 xx <- dbSendQuery(con, paste0("CREATE TABLE servers AS SELECT DISTINCT ON (server) *
                         FROM ( SELECT *, MAX(ncomm4visits) OVER (PARTITION BY server ORDER BY year, week) AS ncommmax FROM serversweeks
-                        ) AS inner1 WHERE ncommmax = ncomm4visits OR ncommmax IS NULL ORDER BY server, RANDOM()"))
+                        ) AS inner1 WHERE ncommmax = ncomm4visits OR ncommmax IS NULL ORDER BY server, ncommmax DESC NULLS LAST, RANDOM()"))
 #dbSendQuery(con, "ALTER TABLE servers ALTER COLUMN ncommmax SET NOT NULL")
 
 ### output the data to R and to file

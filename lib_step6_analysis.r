@@ -29,7 +29,7 @@ library(rms)
 library(broom)
 
 ### functions before data prep
-buildPickDependent <- function(spings, dependent='ncomm4visits') {
+buildPickDependent <- function(spings, dependent='ncomm4visits_randomweek') {
     ### Pick Variable
     ### to do it, I have to create a one-row-per-server table 
     ###  it is occasionally useful so I'll save it maybe
@@ -39,7 +39,18 @@ buildPickDependent <- function(spings, dependent='ncomm4visits') {
     #setkey(spings, dataset_source, ping_uid, date_ping, srv_addr)
     ### reduce data down to one dependent type
     sserv <- spings
-    if (dependent == 'ncomm4visits') {
+    if (dependent == 'ncomm4visits_bestweek') {
+        sserv <- sserv[bestweek4visits==T]
+        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
+    } else if (dependent == 'ncomm30visits_bestweek') {
+        sserv <- sserv[(bestweek30visits==T)]
+        sserv[,':='(y=ncomm30visits, ylog=log10(ncomm30visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL, ncomm4visits=NULL)] ### erase these columsn to ge tthe ones from spings instead
+    } else if (dependent == 'ncomm4visits_randomweek') {
+		### base this on sampling from among !is.na(ncomm4visits)
+        #sserv <- sserv[!is.na(ncomm4visits), .SD[sample(1:.N, 1)], by=srv_addr]
+        sserv <- sserv[!is.na(ncomm4visits)][, .SD[sample(1:.N, 1)], by=srv_addr] ### pick one random month from each server's lifetime (of months that lasted a month and gave visit data at all)
+        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
+	} else if (dependent == 'ncomm4visits_bestweek_old_andwhatwasIeventhinking?') {
         sserv <- sserv[(bestweek4visits==T & bestweek30visits==T) | (is.na(bestweek4visits) & bestweek30visits==T)] ### get unique server rows, with a bias for the 4 visits measure over the 30visists measure
         sserv[,':='(bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL, ncomm4visits=NULL)] ### erase these columsn to ge tthe ones from spings instead
         sserv <- spings[bestweek4visits==T,.(srv_addr, ncomm4visits)][sserv,on=c("srv_addr")]

@@ -7,8 +7,8 @@ RCMD := R --interactive
 #model: model.Rout
 #paper: plot.Rout paper.pdf
 all: prep
-prep: prepscrapes prepposts prepmerge prepanalysis
-dev: prepmerge prepanalysis analysis
+prep: prepscrapes prepposts prepmerge
+dev: prepanalysis analysis
 
 
 prepscrapes:
