@@ -3,10 +3,8 @@ pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/
 source(paste0(pathLocal,"local_settings.R"))
 source(paste0(pathLocal,"lib_step6_analysis.r"))
 source(paste0(pathLocal,"lib_plotting.r"))
-library(boot)
-library(ggthemes)
-library(scales)
-### LOAD dATA
+
+### LOAD DATA
 mc <- readRDS(paste0(pathData, "step55_serversweeksplugins.rds"))
 expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
@@ -39,8 +37,8 @@ mw[,paste("sum", grep("^res_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, gr
 mw[,paste("sum", grep("^inst_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, grep("^inst_", names(mw), value=TRUE), with=F], sum)]
 ### add a column measuring the diversity of solutions used by a server
 library(entropy) ### use small-n bias correction, Chao-Shen, which is fast and comparable to NSB  ##  NOOOOOOO: CS is awful: using shirnkage
+entropy_calc <- function(x) {sum(-x*log(x))}
 entropy_calc <- function(x) {entropy(x, method="ML")}
-entropy_calc <- function(x) {-x*log(x)}
 mw[,srv_entropy:={inst_dist<-.SD[,grep("^inst_[^n]", names(mw)),with=FALSE][1]; inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }, by=srv_addr]
 # JUST FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
 ### add variables unique to the wide format
@@ -57,6 +55,9 @@ mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 ### these two are for the marginal density plots
 mw[,yrug:=(log2(ifelse(y>100, 100, y)+1)+1.0)*0.7+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.4+rnorm(nrow(.SD),sd=0.02)]
+### resource types
+mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld)),by=.(srv_addr)]
+mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy(c(pct_grief, pct_ingame, pct_realworld)))),by=.(srv_addr)]
 # SAMPLING
 ### split data up
 mc_split <- splitDataTestTrain(mw, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
@@ -73,10 +74,13 @@ full_data_rug <-  geom_rug(data=mw, mapping=aes(x=xrug, y=yrug), col=rgb(0.7,0.7
 ggel_lowbad <- scale_fill_gradient(high="#41ab5d", low="#cccccc") 
 ggel <- scale_fill_gradient(high="#3182bd", low="#cccccc") 
 ggel_gov <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=2.5, breaks=seq(from=0,to=12,by=2)) 
+ggel_gov2 <- scale_fill_gradient2(low="#006837", mid="#ffffbf", high="#fdae61", midpoint=0.15) 
 ggel_gov_prop <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.5, breaks=seq(from=0,to=1,by=0.2)) 
-ggel_gov_rat <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59", midpoint=0.10) 
+ggel_gov_rat <- scale_fill_gradient2(low="#006837", mid="#ffffbf", high="#fdae61", midpoint=0.05) 
 ggel_gov_rat_within <- scale_fill_gradient2(low="#91cf60", mid="#ffffbf", high="#fc8d59") 
 ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91cf60", l=100, c=100), high=muted("#fc8d59", l=100, c=100)))(rescale(seq(from=0,to=10,by=2))), values=rescale(seq(from=0,to=10,by=2)^2)) 
+ggel_govaud <- scale_fill_gradient2(low="#91cf60", mid="#f0f0f0", high="#fc8d59", midpoint=3 )
+ggel_govaud2 <- scale_fill_gradient(low="#f0f0f0", high=muted("#fc8d59", l=80,c=100))
 
 # RESULTS FROM THE GOV-RELATED 5000
 ### PLOT COLLECTIVE ACTION PROBLEM EMERGENCE
@@ -86,12 +90,11 @@ for (i in 1:3){
 	print(plot_gov_resources <- make_plot_size_by_success(mw, c("res_grief", "res_ingame","res_realworld")[i], gov_mean, ggmore=ggel_gov, ggguide=guide_legend("Mean plugin count", reverse=TRUE), reps=100))
 	print(plot_gov_resources_ratio <- make_plot_size_by_success(mw, c("res_grief", "res_ingame","res_realworld"), gov_mean_proportion_2, focal=i, ggmore=ggel_gov_rat, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100))
 }
+print(plot_gov_resources_ratio <- make_plot_size_by_success(mw, c("entropy_res"), gov_mean_narm, ggmore=ggel_lowbad, ggguide=guide_legend("Randge of things being governed"), reps=100))
 
 ### NOW REDO IN ONE SPECIALIST DATATABLE
-mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_ingame, res_realworld)]
+mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_ingame, res_realworld, total_res, entropy_res, pct_grief, pct_ingame, pct_realworld)]
 ## this gives NAs if there are no res_ plguins in any category. so it goes.
-mwres[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld)),by=.(srv_addr)]
-mwres[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld)),by=.(srv_addr)]
 #(plot_gov_res <- make_plot_size_by_success(mwres, "res_grief", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
 #(plot_gov_res <- make_plot_size_by_success(mwres, "pct_grief", gov_mean_narm , ggmore=ggel_gov_rat, ggguide="none", reps=1000))
 ### institution by size:
@@ -100,8 +103,8 @@ setnames(gg, c('resourcegov_count1', 'resourcegov_count2'), c('resourcegov_count
 gginclude <- c("res_grief", "res_ingame", "res_realworld")
 #gg <- gg[resourcegov %in% gginclude]
 gg[,resourcegov:=factor(resourcegov, levels=1:3, labels=c("Antisociality", "Physical resources", "Virtual resources"))] ### patterns() erases old names with integers that have to be replaced with a leap of faith
-print(plot_resgov <- make_plot_size_by_success(gg, c("resourcegov_count"), gov_mean_narm, ggmore=ggel_gov_by_type, ggtext=FALSE, reps=10, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
-print(plot_resgov_pct <- make_plot_size_by_success(gg, c("resourcegov_pct"), gov_mean_narm , ggmore=ggel_gov_rat, ggtext=FALSE, reps=0, facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
+print(plot_resgov <- make_plot_size_by_success(gg, c("resourcegov_count"), gov_mean_narm, ggmore=ggel_gov2, ggtext=TRUE, reps=10, ggguide="none", facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
+print(plot_resgov_pct <- make_plot_size_by_success(gg, c("resourcegov_pct"), gov_mean_narm , ggmore=ggel_gov_rat, ggtext="%", reps=0, ggguide="none", facetting=c("resourcegov")) + facet_wrap( ~ resourcegov, nrow=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
 #(plot_actiondown_scaling <- make_plot_size_by_success(gg[resourcegov == "Proscriptions"], c("institution_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
 ggsave(plot_resgov, file=paste0(pathImages, "plot_resgov.png"), units='cm', width=4.25, height=2.5, scale=3)
 ggsave(plot_resgov_pct, file=paste0(pathImages, "plot_resgov_pct.png"), units='cm', width=4.25, height=2.5, scale=3)
@@ -120,22 +123,26 @@ ggsave(plot_resgov_spectrum, file=paste0(pathImages, "plot_resgov_spectrum.png")
 
 
 # PLOT GOV COMPLEXITY
-# plot the three "complexity"results together: intensity, centralization, diversity within 
-(plot_gov_scaling <- make_plot_size_by_success(mw, "gov", gov_mean , ggmore=ggel_gov, ggguide="none", reps=1000))
-(plot_gov_specialization <- make_plot_size_by_success(mw, "plugin_specialization", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
+# plot the four "complexity"results together: intensity, consolidation, specialization, diversity within 
 # PLOT GOV INTENSITY
+(plot_gov_scaling <- make_plot_size_by_success(mw, "total_res", gov_median , ggmore=ggel_gov, ggguide="none", reps=1000) + ggtitle("Intensity"))
 ggsave(plot_gov_scaling, file=paste0(pathImages, "plot_gov_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
 # PLOT GOV SPECIALIZATION
+(plot_gov_specialization <- make_plot_size_by_success(mw, "plugin_specialization", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000) + ggtitle("Specialization"))
 ggsave(plot_gov_specialization, file=paste0(pathImages, "plot_gov_specialization.png"), units='cm', width=3.25, height=2.5, scale=3)
-(plot_srv_institutional_diversity <- make_plot_size_by_success(mw, "srv_entropy", gov_mean_narm, ggmore=ggel_lowbad, ggguide=guide_legend("Rule Diversity", reverse=TRUE), reps=10, ggrug=FALSE) + full_data_rug)
-# PLOT GOV CENTRALIZATION
 # PLOT GOV COMPLEXITY
+(plot_srv_institutional_diversity <- make_plot_size_by_success(mw, "srv_entropy", gov_mean_narm, ggmore=ggel_lowbad, ggguide="none", reps=10, ggrug=FALSE) + full_data_rug + ggtitle("Rule diversity"))
 ggsave(plot_srv_institutional_diversity, file=paste0(pathImages, "plot_srv_institutional_diversity.png"), units='cm', width=4, height=2.5, scale=3)
+# PLOT GOV CONSOLIDATION
+(plot_gov_consolidation <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, reps=100, ggtext="%", ggguide="none", ggrug=FALSE) + full_data_rug + ggtitle("Consolidation (%)") )
+ggsave(plot_gov_consolidation, file=paste0(pathImages, "plot_gov_consolidation.png"), units='cm', width=4, height=2.5, scale=3)
 
 
 # PLOT DIVERSITY ACROSS SERVERS
 ### server diversity
 ### bootstrapping fucntion for entropy
-(plot_srv_gov_diversity <- (make_plot_size_by_success(mw, grep("^inst_[^n]", names(mw), value=TRUE), gov_dist, ggguide=guide_legend("Population Variability", reverse=TRUE), ggmore=ggel_lowbad, reps=10, ggtext=FALSE, ggrug=FALSE) + full_data_rug))
+(plot_srv_gov_diversity <- (make_plot_size_by_success(mw, grep("^inst_[^n]", names(mw), value=TRUE), gov_dist, ggguide="none", ggmore=ggel_lowbad, reps=10, ggtext=FALSE, ggrug=FALSE) + full_data_rug + ggtitle("Community diversity")))
 ggsave(plot_srv_gov_diversity, file=paste0(pathImages, "plot_srv_gov_diversity.png"), units='cm', width=4, height=2.5, scale=3)
 
+### AGGREGATE PLOTS
+ggsave(plot_grid(plot_gov_scaling, plot_gov_specialization, plot_srv_institutional_diversity, plot_gov_consolidation,  labels = c("A", "B", "C", "D"), align = "h", nrow=1), file=paste0(pathImages, "plot_development.png"), units='cm')

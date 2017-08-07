@@ -5,9 +5,6 @@ source(paste0(pathLocal,"local_settings.R"))
 source(paste0(pathLocal,"lib_step6_analysis.r"))
 source(paste0(pathLocal,"lib_plotting.r"))
 
-library(boot)
-library(ggthemes)
-library(scales)
 ### notes:
 ###  if there is lots of data 50/50 training/test is fine, and you shouldn't calculate full lasso paths (dfmax=50 or 100) and it's important to filter columns down before widening the matrix.  
 
@@ -47,15 +44,18 @@ ggsave(plot_srv_density, file=paste0(pathImages, "plot_srv_density.png"), units=
 mw[,.(unsuccessful=sum(table(perf_factor)[1:2]),all=sum(table(perf_factor)),ratio=sum(table(perf_factor)[1:2])/sum(table(perf_factor))), by=pop_size_factor]
 
 # LIFETIME 
-(plot_srv_hazard_bar1 <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_bar(stat="identity", alpha=0.6) + theme_bw() + scale_y_log10("Count") + xlab("Longevity (weeks)") )
+#(plot_srv_hazard_bar <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_bar(stat="identity", alpha=0.6) + theme_bw() + scale_y_log10("Count") + xlab("Longevity (weeks)") )
+(plot_srv_hazard_point <- ggplot(mw_train[,.(longevity_count=.N),by=.(weeks_up_total)], aes(x=weeks_up_total, y=longevity_count)) + geom_point(stat="identity", alpha=0.6) + theme_bw() + scale_y_log10("Count") + xlab("Longevity (weeks)") )+theme_cowplot()
 median( mw_train$weeks_up_total)
 (plot_srv_hazard <- make_plot_size_by_success(mw_train, "weeks_up_total", gov_median, ggmore=scale_fill_gradient(high="#3182bd", low="#cccccc"), ggguide="none", reps=1000, ggrug=FALSE ) + full_data_rug + guides(fill="none") )
 ggsave(plot_srv_hazard, file=paste0(pathImages, "plot_srv_hazard.png"), units='cm', width=3.25, height=2.5, scale=3)
-ggsave(plot_srv_hazard_bar1, file=paste0(pathImages, "plot_srv_hazard_bar1.png"), units='cm', width=5, height=1.5, scale=3)
+ggsave(plot_srv_hazard_point, file=paste0(pathImages, "plot_srv_hazard_point.png"), units='cm', width=5, height=1.5, scale=3)
 
 # UNIQUES VS RETURNS
 plot_population_distribution <- plot_visitortype(mw, plot_type='horizontal')
 plot_population_distribution 
 #ggsave(plot_population_distribution, file=paste0(pathImages, "plot_population_distribution.png"), units='cm', width=5, height=2.5, scale=5)
-ggsave(plot_population_distribution, file=paste0(pathImages, "plot_population_distribution_rect.png"), units='cm', width=2, height=3, scale=5)
-ggsave(plot_population_distribution, file=paste0(pathImages, "plot_population_distribution_rect2.png"), units='cm', width=3, height=2, scale=5)
+ggsave(plot_population_distribution, file=paste0(pathImages, "plot_population_distribution_rect.png"), units='cm', width=3, height=2, scale=5)
+
+### AGGREGATE PLOTS
+ggsave(plot_grid( plot_srv_hazard_bar, NULL, plot_population_distribution_rect, plot_srv_density,  labels = c("A", "", "B", "C")), file=paste0(pathImages, "plot_survey.png"), units='cm')

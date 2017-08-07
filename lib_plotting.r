@@ -1,3 +1,7 @@
+library(boot)
+library(scales)
+library(ggthemes)
+library(cowplot)
 
 ### plotting function
 make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=geom_blank(), ggguide = guide_legend(reverse=TRUE), reps=0, return_plot=T, facetting=c(), unscaledyvar=TRUE, xvar="pop_size_factor", yvar="perf_factor", ggtext=TRUE, ggrug=TRUE, ...) {
@@ -26,9 +30,13 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
         } else {
             mwp1 <- mwp1 + scale_y_discrete("Core members", expand = c(0.035,0))
         }
-        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_bw() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
-        if (ggtext) {
-            mwp1 <- mwp1 + geom_text(aes(label=signif(pop_var, 2)), color="dark grey")
+        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_cowplot() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45), plot.title = element_text(hjust = 0.5)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
+        if (ggtext != FALSE) {
+			if (ggtext=="%") {
+				mwp1 <- mwp1 + geom_text(aes(label=paste("",round(100*pop_var), '%', sep='')), color="dark grey")
+			} else {
+				mwp1 <- mwp1 + geom_text(aes(label=round(signif(pop_var, 2),2)), color="dark grey")
+			}
         }
         if (ggrug) {
             #mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
@@ -75,7 +83,7 @@ plot_visitortype <- function(mw, plot_type=c('vertical', 'horizontal', 'horizont
 		 labs(title="") +
 		 xlab("") + ylab("") +
 		 facet_wrap( ~ vtype) +
-		 theme_tufte() +
+		 theme_cowplot() +
 		 theme(axis.ticks=element_blank()) +
 		 theme(axis.text.y=element_blank()) +
 		 theme(axis.text.x=element_blank()) +
@@ -99,7 +107,7 @@ plot_visitortype <- function(mw, plot_type=c('vertical', 'horizontal', 'horizont
             labs(title="") +
             xlab("") + ylab("") +
             facet_wrap( ~ vtype) +
-            theme_tufte() +
+            theme_cowplot() +
             theme(axis.ticks=element_blank()) +
             theme(axis.text.y=element_blank()) +
             theme(axis.text.x=element_blank()) +
@@ -123,7 +131,7 @@ plot_visitortype <- function(mw, plot_type=c('vertical', 'horizontal', 'horizont
      labs(title="") +
      xlab("") + ylab("") +
      facet_wrap( ~ vtype, ncol=1) +
-     theme_tufte() +
+     theme_cowplot() +
      theme(axis.ticks=element_blank()) +
      theme(axis.text.y=element_blank()) +
      theme(axis.text.x=element_blank()) +
@@ -138,6 +146,9 @@ plot_visitortype <- function(mw, plot_type=c('vertical', 'horizontal', 'horizont
  return(plot_population_distribution )
 }
 
+### handle NAs thusly: https://stackoverflow.com/questions/17398044/how-can-i-vectorize-the-entropy-calculation
+entropy_calc <- function(x) {entropy(x, method="ML")}
+entropy_calc <- function(x) {sum(log(x^-x))}
 
 ### aggregation functions
 gov_median <- function(x,i) median(as.double(asdf(x[i])[,1]))
@@ -176,8 +187,7 @@ gov_var_diversity <- function(data, i_samp) {
 gov_entropy_diversity <- function(data, i_samp) {
     samp_size <- ncol(data) ### this is a bit les unproper, but 
     samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
-    #entropy_calc <- function(x) {-x*log(x)}
-    entropy_calc <- function(x) {entropy(x, method="ML")}
+    #entropy_calc <- function(x) {sum(-x*log(x))}
     if(nrow(data[i_samp]) < samp_size) {
         diversity <- numeric()
     }
