@@ -22,7 +22,7 @@ if (make_db) {
     setnames(dserv, "timestamp", "thetimestamp")
     dserv <- unique(dserv, by=c("thetimestamp", "server"))
     dbWriteTable(con, "serverspings", asdf(dserv))
-    dbSendQuery(con, "ALTER TABLE serverspings ALTER COLUMN thetimestamp SET DATA TYPE TIMESTAMP WITHOUT TIME ZONE USING thetimestamp::TIMESTAMP, ALTER COLUMN server SET NOT NULL, ALTER COLUMN nquota SET NOT NULL, ALTER COLUMN npop SET NOT NULL")
+    dbSendQuery(con, "ALTER TABLE serverspings ALTER COLUMN thetimestamp SET DATA TYPE TIMESTAMP WITHOUT TIME ZONE USING thetimestamp::TIMESTAMP, ALTER COLUMN server SET NOT NULL, ALTER COLUMN nquota SET NOT NULL, ALTER COLUMN npop SET NOT NULL, ALTER COLUMN hackedapi SET NOT NULL")
     dbSendQuery(con, "ALTER TABLE serverspings ADD UNIQUE (thetimestamp, server)")
     ###    week column
     dbSendQuery(con, "ALTER TABLE serverspings ADD COLUMN year INTEGER, ADD COLUMN week INTEGER")

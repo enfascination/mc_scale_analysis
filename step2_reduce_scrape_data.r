@@ -17,7 +17,7 @@ if (make_db) {
     ### reduced dataset: one row per server per week
     ###   also initialize those columsn taht are cheap and easy to do with a simple group clause
     ###   FYI: nvisits is the number of visits this week, from players_online. it differs from nvisitsobs, which is the number of visits for which I have player ids
-    server_by_week_query <- paste0("SELECT server, year, week, MAX(nquota) AS testnmaxquota, MIN(nquota) AS testnminquota, MAX(npop) AS nmaxpop, SUM(npop) AS nvisits, MAX(pctquota) AS pctmaxpop FROM serverspings GROUP BY server, year, week")
+    server_by_week_query <- paste0("SELECT server, year, week, MAX(nquota) AS testnmaxquota, MIN(nquota) AS testnminquota, MAX(npop) AS nmaxpop, SUM(npop) AS nvisits, MAX(pctquota) AS pctmaxpop, COUNT(hackedapi IS TRUE) > 0 AS hackedapi FROM serverspings GROUP BY server, year, week")
     #dbGetQuery(con, paste0(server_by_week_query, " ", "LIMIT 10"))
     xx <- dbSendQuery(con, paste0("CREATE TABLE serversweeks AS (", server_by_week_query,")"))
     xx <- dbSendQuery(con, "ALTER TABLE serversweeks ADD UNIQUE (server, year, week)")

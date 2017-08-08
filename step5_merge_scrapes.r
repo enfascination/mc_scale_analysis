@@ -96,7 +96,7 @@ sposts <- sposts[srv_repplug==T] ### this makes sure that the match below is to 
 setkey(spings, srv_addr, date_roll)
 setkey(sposts, srv_addr, date_roll)
 spings_m <- sposts[spings, roll="nearest"]
-spings_m <- spings_m[,.(post_uid, ping_uid, date_post=date_post, date_ping=date_roll, srv_addr, srv_max=testnmaxquota, nmaxpop, pctmaxpop, nvisitsunobs=nvisits, nvisitsobs52=nvisitsobs, nvisitsobs12=nvisits_month, nuvisits52=nuvisits, nuvisits12=nuvisits_month, genivisits, ncomm30visits, ncomm4visits, srv_votes, latency10ppl, latency20ppl, latency50pct, bestweek30visits, bestweek4visits, bghost, jubilees, srv_v, srv_max_bak=srv_max, srv_details, srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, dataset_source, weeks_up_total, weeks_up_todate, date_ping_1st, date_ping_lst, srv_retired, plugin_count, keyword_count, tag_count, sign_count)]
+spings_m <- spings_m[,.(post_uid, ping_uid, date_post=date_post, date_ping=date_roll, srv_addr, srv_max=testnmaxquota, nmaxpop, pctmaxpop, nvisitsunobs=nvisits, nvisitsobs52=nvisitsobs, nvisitsobs12=nvisits_month, nuvisits52=nuvisits, nuvisits12=nuvisits_month, genivisits, ncomm30visits, ncomm4visits, srv_votes, latency10ppl, latency20ppl, latency50pct, bestweek30visits, bestweek4visits, hackedapi, bghost, jubilees, srv_v, srv_max_bak=srv_max, srv_details, srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, dataset_source, weeks_up_total, weeks_up_todate, date_ping_1st, date_ping_lst, srv_retired, plugin_count, keyword_count, tag_count, sign_count)]
 spings <- spings_m
 
 ### statistics and other NAs after this merge

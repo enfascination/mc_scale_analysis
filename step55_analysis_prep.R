@@ -9,6 +9,8 @@ splugins <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
 pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
 
 
+### cut servers with evidence of hacked APIs that can undermine community and other success measuers
+sfeat <- sfeat[srv_addr %ni% sfeat[hackedapi == TRUE,unique(srv_addr)]]
 sfeat <- buildPickDependent(spings, dependent= 'ncomm4visits_bestweek')
 sfeat <- buildFeatureTable(sfeat, splugins, pluginstats)
 
