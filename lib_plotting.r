@@ -146,9 +146,6 @@ plot_visitortype <- function(mw, plot_type=c('vertical', 'horizontal', 'horizont
  return(plot_population_distribution )
 }
 
-### handle NAs thusly: https://stackoverflow.com/questions/17398044/how-can-i-vectorize-the-entropy-calculation
-entropy_calc <- function(x) {entropy(x, method="ML")}
-entropy_calc <- function(x) {sum(log(x^-x))}
 
 ### aggregation functions
 gov_median <- function(x,i) median(as.double(asdf(x[i])[,1]))

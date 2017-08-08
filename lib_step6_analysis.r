@@ -28,6 +28,10 @@ registerDoMC(cores = 8)
 library(rms)
 library(broom)
 
+### handle NAs thusly: https://stackoverflow.com/questions/17398044/how-can-i-vectorize-the-entropy-calculation
+entropy_calc <- function(x) {entropy(x, method="ML")}
+entropy_calc <- function(x) {sum(log(x^-x))}
+
 ### functions before data prep
 buildPickDependent <- function(spings, dependent='ncomm4visits_randomweek') {
     ### Pick Variable
@@ -81,6 +85,7 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
 
     ### Pre-widening Enrichment and Cleaning
     sfeat[,feat_count:=.N,by="feat_code"]
+	### this introduces NA's in servers that never reported any plugins (zero features/rows of feat_source=="plugin")
     sfeat[,plugin_specialization:= .SD[feat_source=="plugin", as.numeric(median(feat_count))], by="srv_addr"]
     sfeat[srv_max>0,srv_max_log:=log10(srv_max)]
     sfeat[,log_plugin_count:=log10(plugin_count+1)]
@@ -101,14 +106,15 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     return(sfeat)
 }
 
-filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org')) {
+filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'), maxPopulationEverObserved=FALSE) {
 
     print(c("Filter 0:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
     ### this should go first, otherwise DataProvision will delete mention of 
     ###  some plugins with blacklist=TRUE and this function will keep servers
     ###  that should have been excluded
-	mc <- filterDataSetDownComparability(mc, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
+	if not maxPopulationEverObserved: maxPopulationEverObserved = mc[order(-nmaxpop), unique(nmaxpop)][1]
+	mc <- filterDataSetDownComparability(mc, maxPopulationEverObserved, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
 
     print(c("Filter 1:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
@@ -150,15 +156,16 @@ filterDataSetDownDataProvision <- function(mc, featureCountMin, keepFeatTypes, k
     return(mc)
 }
 
-filterDataSetDownComparability <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org')) {
+filterDataSetDownComparability <- function(mc, maxPopulationEverObserved, cutUnrealistic=TRUE, cutNonVanilla=FALSE) {
     ### Pre-widening Filtering
     print(c("Filter 1.0:", mc[,length(unique(srv_addr))], nrow(mc) ))
     if (cutUnrealistic) {  ### minmally comparable
         mc <- mc[srv_max >0]
+        #mc <- mc[!hackedapi]
         #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
         #mc <- mc[nmaxpop <= 1000]  ### its bad when admins edit this to be unrealistic, but it doesn't affect me: bounding values I actually measure catches everything that this catches.
-        max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
-        mc[srv_max >= max_srv_max_observed, ':='(srv_max=max_srv_max_observed, srv_max_log=log10(max_srv_max_observed))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data.
+        #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
+        mc[srv_max >=  maxPopulationEverObserved, ':='(srv_max=  maxPopulationEverObserved, srv_max_log=log10(  maxPopulationEverObserved))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data.
     }
 
     print(c("Filter 1.1:", mc[,length(unique(srv_addr))], nrow(mc) ))
