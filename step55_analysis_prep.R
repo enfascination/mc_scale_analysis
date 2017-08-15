@@ -3,40 +3,43 @@ source(paste0(pathLocal,"header_redditscrape.r"))
 source(paste0(pathLocal,"lib_step6_analysis.r"))
 source(paste0(pathLocal,"plugin_classes.r"))
 
-### Load Data
+### lOAD DATA
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
 splugins <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
 pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
 
 
-### cut servers with evidence of hacked APIs that can undermine community and other success measuers
-sfeat <- sfeat[srv_addr %ni% sfeat[hackedapi == TRUE,unique(srv_addr)]]
-sfeat <- buildPickDependent(spings, dependent= 'ncomm4visits_bestweek')
-sfeat <- buildFeatureTable(sfeat, splugins, pluginstats)
-
-### ### this is a function for getting a template to hand code most popular plugins
-writeBlankFeatureCodingTable <- function(sfeat, filename) {
-    ### filter plugins used only once or twice 
-    #write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, action_admin_up=0, action_other_down=0, grief=0, inoutworld=0, inst=0, normpath=0, forbid=0, boundary=0, position=0, choice=0, info=0, infopath=0, aggregation=0, payoff=0, scope=0, shop=0, tech=0, game=0, loopadmin=0, poly=0, property=0, chat=0, apply=0, resource=0),by=.(feat_code)][order(-feat_count)]), file=filename)
-    write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, na='', foreign='', gov_auto=(ifelse(!is.na(cat_admintools) & (cat_admintools == 1 | cat_antigrief == 1 | cat_chat == 1 | cat_economy == 1 | cat_informational ==1  ), 1,0)), gov_hand='', resource=ifelse(!is.na(cat_antigrief) & (cat_antigrief == 1) ,'grief',''), audience='', upkeep='', enable_forbid='', institution=ifelse(!is.na(cat_economy) & cat_economy == 1 & cat_chat != 1, 'shop',''), actionsituation='', notes='' ), by=.(feat_code)][order(-feat_count)]), file=filename, row.names=FALSE)
+### CUT SERVERS WITH EVIDENCE OF HACKED apiS THAT CAN UNDERMINE COMMUNITY AND OTHER SUCCESS MEASUERS
+spings_clean <- spings[srv_addr %ni% spings[hackedapi == TRUE,unique(srv_addr)]]
+#spings_clean <- spings
+if (TRUE ) {  ### minmally comparable
+    spings_clean <- spings_clean[srv_max >0]  ### due to a now-fixed oversight, hackedapi failed to exclude the inappropriate case that srv_max == 0.
+    spings_clean <- spings_clean[srv_addr %ni% c("131.153.5.218", "alpa.playmcm.net", "playmcm.net", "pvp.originmc.org")]
+    #mc <- mc[!hackedapi]
+    #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
+    #mc <- mc[nmaxpop <= 1000]  ### its bad when admins edit this to be unrealistic, but it doesn't affect me: bounding values I actually measure catches everything that this catches.
+    #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
 }
-if (0) {
+
+### PICK DEPENDENT
+sfeat_dep <- buildPickDependent(spings_clean, dependent= 'ncomm4visits_bestweek')
+maxPopulationEverObserved <- sfeat_dep[order(-nmaxpop), unique(nmaxpop)][1]
+sfeat_dep[srv_max >=  maxPopulationEverObserved, ':='(srv_max=  maxPopulationEverObserved, srv_max_log=log2(  maxPopulationEverObserved+1))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data. I must do this after buildPickDependent instead of before because more servers that are subjectively fake servers are not being caught by hackedapi, and calculating this max after the merge inciedentally catches more of those.
+
+if (0) {  ### for building blank feature table
+    mc <- buildFeatureTable(sfeat_dep, splugins, pluginstats)
     n_servers <- sfeat[,length(unique(srv_addr))]
     feat_count_min <- max(2, as.integer(n_servers/5000))
-    sfeat2 <- filterDataSetDown(sfeat, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'property', 'tag'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
-    writeBlankFeatureCodingTable(sfeat2, paste0(pathData, "plugin_codes_raw.csv"))
+    sfeat2 <- filterDataSetDown(sfeat, cutNonVanilla=TRUE, cutNonPositiveDependent=TRUE, featureCountMin=feat_count_min, keepFeatTypes=c('plugin', 'property', 'tag'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+    writeBlankFeatureCodingTable(mc, paste0(pathData, "plugin_codes_raw.csv"))
 }
 
-
-### SAVE eVERYTING
-saveRDS(sfeat, paste0(pathData, "step55_serversweeksplugins.rds"))
 
 ### PREP DATA FOR WIDE LONG ANALYSIS OF SURVIVAL
 ## DATA PREP
-maxPopulationEverObserved = spings[order(-nmaxpop), unique(nmaxpop)][1]
-mc <- buildPickDependent(spings, dependent= 'ncomm4visits_bestweek')
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=FALSE, featureCountMin=0)
-mw <- mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "keyword_count", "tag_count", "sign_count")]
+mc <- sfeat_dep
+mc <- filterDataSetDown(mc, cutNonVanilla=FALSE, cutNonPositiveDependent=FALSE, featureCountMin=0)
+mw <- mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_bak", "srv_details", "dataset_source", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "keyword_count", "tag_count", "sign_count")]
 
 # ENRICH FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
@@ -45,9 +48,9 @@ mw[,yrug:=(log2(ifelse(y>150, 150, y)+1)+1.0)*1.0+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.25+rnorm(nrow(.SD),sd=0.02)]
 
 # SAMPLING
-mc_split <- splitDataTestTrain(mw, proportions=c(0.2, 0.8), validation_set=FALSE)
-mw_train <- mc_split$train
-mw_test <- mc_split$test
+mw_split <- splitDataTestTrain(mw, proportions=c(0.2, 0.8), validation_set=FALSE)
+mw_train <- mw_split$train
+mw_test <- mw_split$test
 mw_full <- mw
 ### MAIN DATASET
 #mw <- mw_full
@@ -58,13 +61,13 @@ saveRDS(mw, paste0(pathData, "step6_servers_wide_tallanalysis.rds"))
 
 ### PREP DATA FOR WIDE ANALYSIS OF GOVERNANCE
 ### LOAD DATA
-mc <- sfeat
+mc <- buildFeatureTable(sfeat_dep, splugins, pluginstats)
 expect_true(mc[,length(unique(srv_addr))] == mc[,length(unique(post_uid))])
 mc[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
 ## DATA PREP
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=25, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+mc <- filterDataSetDown(mc, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=25, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
 n_servers <- mc[,length(unique(srv_addr))]; n_servers 
 dim(mc)
 #writeBlankFeatureCodingTable(mc, paste0(pathData, "plugin_widehandcodes_raw.csv"))
@@ -73,7 +76,7 @@ plugin_codes_byhand <- get_plugin_codes()
 mc[mc$feat_code %ni% plugin_codes_byhand$feat_code, unique(feat_code) ]  ### more things to code and integrate back into get_plugin_codes()
 #cor(plugin_codes_byhand[4:ncol(plugin_codes_byhand)])
 mw <- merge(
-        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "log_plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count", "plugin_specialization")],
+        mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_log", "srv_max_bak", "srv_details", "dataset_source", "dataset_reddit", "dataset_omni", "dataset_mcs_org", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_int", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "log_plugin_count", "keyword_count", "tag_count", "sign_count", "norm_count", "plugin_specialization")],
         #mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("action_admin_up", "action_other_down", "grief", "inoutworld", "inst", "isnorm", "normpath", "forbid", "boundary", "position", "choice", "info", "infopath", "aggregation", "payoff", "scope", "shop", "tech", "game", "loopadmin", "poly", "hierarchy", "property", "chat", "apply", "resource")]
         mc[, lapply(.SD, function(x) sum(x, na.rm=T)), by=.(srv_addr), .SDcols=c("gov", "res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff")]
         , by="srv_addr", all=T)
@@ -99,6 +102,7 @@ mw[,pop_size_factor_coarse:=cut(srv_max_log, breaks=c(0,1,2,3), labels=c("<10", 
 mw[,pop_size_factor_fine:=cut(srv_max_log, breaks=25, ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,8,12), labels=c("<4", "4 to 16", "16 to 64", "64 to 256", "\u2265256"), ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024"), ordered_result=TRUE, right=TRUE)]
+mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
 mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,1,2,4,6,8), labels=c("\u22641", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
@@ -107,19 +111,22 @@ mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 mw[,yrug:=(log2(ifelse(y>100, 100, y)+1)+1.0)*0.7+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.4+rnorm(nrow(.SD),sd=0.02)]
 ### resource types
-mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld)),by=.(srv_addr)]
+mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld), total_aud=sum(aud_users,aud_admin), ratio_aud=(aud_admin)/sum(aud_users,aud_admin)),by=.(srv_addr)]
 #this introduces NA's because many servers have total_res == res_grief + res_ingame + res_realworld == 0
 mw[total_res==0,':='(pct_grief=0, pct_ingame=0, pct_realworld=0)]
+mw[total_aud==0,':='(ratio_aud=0)]
 mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld)))),by=.(srv_addr)]
 # SAMPLING
 ### split data up
 ### notes:
 ###  if there is lots of data 50/50 training/test is fine, and you shouldn't calculate full lasso paths (dfmax=50 or 100) and it's important to filter columns down before widening the matrix.  
-mc_split <- splitDataTestTrain(mw, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
-mw_train <- mc_split$train
-mw_test <- mc_split$test
+mw_split <- splitDataTestTrain(mw, proportions=c(0.5, 0.25, 0.25), validation_set=TRUE)
+mw_train <- mw_split$train
+mw_test <- mw_split$test
 mw_full <- mw
 ### MAIN DATASET
 #mw <- mw_full
 mw <- mw_train
+
+### SAVE eVERYTING
 saveRDS(mw, paste0(pathData, "step6_servers_wide_govanalysis.rds"))

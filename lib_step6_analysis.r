@@ -45,22 +45,22 @@ buildPickDependent <- function(spings, dependent='ncomm4visits_randomweek') {
     sserv <- spings
     if (dependent == 'ncomm4visits_bestweek') {
         sserv <- sserv[bestweek4visits==T]
-        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
+        sserv[,':='(y=ncomm4visits, ylog=log2(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
     } else if (dependent == 'ncomm30visits_bestweek') {
         sserv <- sserv[(bestweek30visits==T)]
-        sserv[,':='(y=ncomm30visits, ylog=log10(ncomm30visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL, ncomm4visits=NULL)] ### erase these columsn to ge tthe ones from spings instead
+        sserv[,':='(y=ncomm30visits, ylog=log2(ncomm30visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL, ncomm4visits=NULL)] ### erase these columsn to ge tthe ones from spings instead
     } else if (dependent == 'ncomm4visits_randomweek') {
 		### base this on sampling from among !is.na(ncomm4visits)
         #sserv <- sserv[!is.na(ncomm4visits), .SD[sample(1:.N, 1)], by=srv_addr]
         sserv <- sserv[!is.na(ncomm4visits)][, .SD[sample(1:.N, 1)], by=srv_addr] ### pick one random month from each server's lifetime (of months that lasted a month and gave visit data at all)
-        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
+        sserv[,':='(y=ncomm4visits, ylog=log2(ncomm4visits+1), bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL)] 
 	} else if (dependent == 'ncomm4visits_bestweek_old_andwhatwasIeventhinking?') {
         sserv <- sserv[(bestweek4visits==T & bestweek30visits==T) | (is.na(bestweek4visits) & bestweek30visits==T)] ### get unique server rows, with a bias for the 4 visits measure over the 30visists measure
         sserv[,':='(bestweek30visits=NULL, bestweek4visits=NULL, ncomm30visits=NULL, ncomm4visits=NULL)] ### erase these columsn to ge tthe ones from spings instead
         sserv <- spings[bestweek4visits==T,.(srv_addr, ncomm4visits)][sserv,on=c("srv_addr")]
         sserv <- sserv[!is.na(ncomm4visits)]
         #sserv[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
-        sserv[,':='(y=ncomm4visits, ylog=log10(ncomm4visits+1)) ]
+        sserv[,':='(y=ncomm4visits, ylog=log2(ncomm4visits+1)) ]
     } else {
         stop("ERROR GKJSDGKHJHHOI")
     }
@@ -87,7 +87,8 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     sfeat[,feat_count:=.N,by="feat_code"]
 	### this introduces NA's in servers that never reported any plugins (zero features/rows of feat_source=="plugin")
     sfeat[,plugin_specialization:= .SD[feat_source=="plugin", as.numeric(median(feat_count))], by="srv_addr"]
-    sfeat[srv_max>0,srv_max_log:=log10(srv_max)]
+    sfeat[srv_max>0,srv_max_log:=log2(srv_max+1)]
+    sfeat[,success:=y/srv_max]
     sfeat[,log_plugin_count:=log10(plugin_count+1)]
     #sserv <- sserv[dataset_source=='reddit']
     #sfeat[,lapply(list(srv_repstat, srv_repquery, srv_repplug, srv_repsample, srv_repsniff, srv_reptopic), sum, na.rm=T), by=dataset_source]
@@ -106,15 +107,14 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     return(sfeat)
 }
 
-filterDataSetDown <- function(mc, cutUnrealistic=TRUE, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'), maxPopulationEverObserved=FALSE) {
+filterDataSetDown <- function(mc, cutNonVanilla=FALSE, cutNonPositiveDependent=TRUE, featureCountMin=0, keepFeatTypes=c('plugin', 'tag', 'keyword', 'sign', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org')) {
 
     print(c("Filter 0:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
     ### this should go first, otherwise DataProvision will delete mention of 
     ###  some plugins with blacklist=TRUE and this function will keep servers
     ###  that should have been excluded
-	if not maxPopulationEverObserved: maxPopulationEverObserved = mc[order(-nmaxpop), unique(nmaxpop)][1]
-	mc <- filterDataSetDownComparability(mc, maxPopulationEverObserved, cutUnrealistic=cutUnrealistic, cutNonVanilla=cutNonVanilla)
+	mc <- filterDataSetDownComparability(mc, cutNonVanilla=cutNonVanilla)
 
     print(c("Filter 1:", mc[,length(unique(srv_addr))], nrow(mc) ))
 
@@ -156,19 +156,10 @@ filterDataSetDownDataProvision <- function(mc, featureCountMin, keepFeatTypes, k
     return(mc)
 }
 
-filterDataSetDownComparability <- function(mc, maxPopulationEverObserved, cutUnrealistic=TRUE, cutNonVanilla=FALSE) {
+filterDataSetDownComparability <- function(mc, cutNonVanilla=FALSE) {
     ### Pre-widening Filtering
     print(c("Filter 1.0:", mc[,length(unique(srv_addr))], nrow(mc) ))
-    if (cutUnrealistic) {  ### minmally comparable
-        mc <- mc[srv_max >0]
-        #mc <- mc[!hackedapi]
-        #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
-        #mc <- mc[nmaxpop <= 1000]  ### its bad when admins edit this to be unrealistic, but it doesn't affect me: bounding values I actually measure catches everything that this catches.
-        #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
-        mc[srv_max >=  maxPopulationEverObserved, ':='(srv_max=  maxPopulationEverObserved, srv_max_log=log10(  maxPopulationEverObserved))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data.
-    }
 
-    print(c("Filter 1.1:", mc[,length(unique(srv_addr))], nrow(mc) ))
     ### need to filter out servers that deiate too far from vanilla gameplay
     ###  and when I do this, I need to do this before performing and filtering on plugin counts, else I'll end up with plugins used only once by the unfilitered sites
     if (cutNonVanilla) { ### minmally comparable
@@ -222,6 +213,12 @@ makeWideModelTable <- function(mc, server_level_vars) {
     return(mc_w)
 }
 
+### ### this is a function for getting a template to hand code most popular plugins
+writeBlankFeatureCodingTable <- function(sfeat, filename) {
+    ### filter plugins used only once or twice 
+    #write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, action_admin_up=0, action_other_down=0, grief=0, inoutworld=0, inst=0, normpath=0, forbid=0, boundary=0, position=0, choice=0, info=0, infopath=0, aggregation=0, payoff=0, scope=0, shop=0, tech=0, game=0, loopadmin=0, poly=0, property=0, chat=0, apply=0, resource=0),by=.(feat_code)][order(-feat_count)]), file=filename)
+    write.csv(unique(sfeat[feat_count > 2,list( feat_name=feat, feat_count, feat_url, blacklist='', foreign='', gov_auto=(ifelse(!is.na(cat_admintools) & (cat_admintools == 1 | cat_antigrief == 1 | cat_chat == 1 | cat_economy == 1 | cat_informational ==1  ), 1,0)), gov_hand='', resource=ifelse(!is.na(cat_antigrief) & (cat_antigrief == 1) ,'grief',''), audience='', upkeep='', enable_forbid='', institution=ifelse(!is.na(cat_economy) & cat_economy == 1 & cat_chat != 1, 'shop',''), actionsituation='', notes='' ), by=.(feat_code)][order(-feat_count)]), file=filename, row.names=FALSE)
+}
 
 ### produce training and test sets
 splitDataTestTrain <- function(data, proportions=c(0.6, 0.4), validation_set=FALSE, seed=42) {
@@ -260,13 +257,11 @@ get_plugin_codes <- function() {
     #pcodes <- pcodes[1:(nrow(pcodes)-1),]
     pcodes[,feat_count:=NULL]
     pcodes[,notes:=NULL]
-    pcodes$na <- with(pcodes, ifelse(is.na(na), 0, 1))
     pcodes$foreign <- with(pcodes, ifelse(is.na(foreign), 0, 1))
     pcodes$gov <- with( pcodes, ifelse(gov_auto==0 | gov_hand==0 | is.na(gov_hand), 0, 1))
     pcodes$blacklist <- with( pcodes, ifelse(!is.na(blacklist) & blacklist == 1,1,0))
     pcodes$blacklist_justmultiserver <- NULL
     pcodes$blacklist_inclminigames <- NULL
-    pcodes$na <- NULL
     pcodes$foreign <- NULL
     pcodes$gov_auto <- NULL
     pcodes$gov_hand <- NULL

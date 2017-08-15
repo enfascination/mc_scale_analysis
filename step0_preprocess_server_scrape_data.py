@@ -25,9 +25,12 @@ def write_scrape_csv_row(dObs, playerWriter, serverWriter):
         (len( dObs['players'] ) > 50 and len( dObs['players'] ) - 20 > dObs['players_online']) or ### and the tolerance is bigger for bigger servers, because more room for lag to affect synching of counts
         dObs['players_max'] + 2 < len( dObs['players'] ) or ### don't exceed max (plus/minus noise/lag)
         dObs['players_max'] + 2 < dObs['players_online'] or
-        dObs['players_max'] < 0 or ### negative is impossible
+        dObs['players_max'] <= 0 or ### negative and zero are impossible
         dObs['players_online'] < 0 or ### negative is impossible
-        (len( dObs['players'] ) == 1 and len( dObs['players'][0]) < 3) #### player array replace by int (18,14,10,1,or 0). When this happens, length of list is never greater than 1
+        (len( dObs['players'] ) == 1 and len( dObs['players'][0]) < 3) or #### player array replace by int (18,14,10,1,or 0). When this happens, length of list is never greater than 1
+        dObs['mc_addr'].lower() in (
+"131.153.5.218", "alpa.playmcm.net", "playmcm.net", "pvp.originmc.org"
+        )
     )
     #if dObs['players_online'] < len(dObs['players']):
     #if (dObs['players_online'] - 1000) > len(dObs['players']):
