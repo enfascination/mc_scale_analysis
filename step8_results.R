@@ -48,8 +48,8 @@ ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91
     (plot_gov_scaling_by_resource_type <- make_plot_size_by_success(gg, c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000, facetting=c("resource")) + facet_wrap( ~ resource, ncol=1)+ theme(strip.background=element_rect(color="white", fill="white"), axis.text=element_text(size=6)))
     ggsave(plot_gov_scaling_by_resource_type, file=paste0(pathImages, "plot_gov_scaling_by_resource_type.png"), units='cm', width=2.25, height=5, scale=3)
     (plot_antigrief_scaling <- make_plot_size_by_success(gg[resource=="Grief"], c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
-    (plot_antigrief_ratio_scaling <- make_plot_size_by_success(gg[resource=="Grief",.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
-(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
+    (plot_antigrief_ratio_scaling <- make_plot_size_by_success(gg, c("resource_count"), gov_median , ggmore=ggel_gov_by_type, ggguide="none", reps=1000) )
+(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, ratio_aud)], c("ratio_aud"), gov_mean, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
     ggsave(plot_antigrief_scaling, file=paste0(pathImages, "plot_antigrief_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
 }
 ### institution by size:
@@ -72,7 +72,7 @@ ggel_gov_by_type <- scale_fill_gradientn(colors=(seq_gradient_pal(low=muted("#91
 ggel_govaud <- scale_fill_gradient2(low="#91cf60", mid="#f0f0f0", high="#fc8d59", midpoint=3 )
 (plot_gov_scaling_by_aud_type <- make_plot_size_by_success(melt(mw_train, id.vars = c("srv_addr", "y", "srv_max", "pop_size_factor", "pop_size_factor_coarse", "perf_factor", "perf_factor_ratio"),  measure.vars = c(grep("^aud_[^n]", names(mw_train), value=TRUE)), variable.name = 'audience', value.name='audience_count'), "audience_count", gov_mean , ggmore=ggel_govaud, ggguide=guide_legend("Governance\nplugins", reverse=TRUE), reps=0, facetting=c("audience")) + facet_wrap( ~ audience, ncol=4)+ theme(strip.background=element_rect(color="white", fill="white")))
 ggel_govaud2 <- scale_fill_gradient(low="#f0f0f0", high=muted("#fc8d59", l=80,c=100))
-(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
+(plot_gov_scaling_by_aud_type2 <- make_plot_size_by_success(mw_train[,.(perf_factor, pop_size_factor, pop_size_factor, ratio_aud)], c("ratio_aud"), gov_mean, ggmore=ggel_govaud2, ggguide=guide_legend("Ratio\ngovernance", reverse=TRUE), reps=100, ggtext=FALSE))
 #ggsave(plot_gov_scaling_by_aud_type2, file=paste0(pathImages, "plot_gov_scaling_by_aud_type2.png"), units='cm', width=4, height=2.5, scale=3)
 ggsave(plot_gov_scaling_by_aud_type, file=paste0(pathImages, "plot_gov_scaling_by_aud_type.png"), units='cm', width=4, height=2.5, scale=3)
 

@@ -71,7 +71,7 @@ ggsave(plot_gov_specialization, file=paste0(pathImages, "plot_gov_specialization
 (plot_srv_institutional_diversity <- make_plot_size_by_success(mw, "srv_entropy", gov_mean_narm, ggmore=ggel_lowbad, ggguide="none", reps=10, ggrug=FALSE) + full_data_rug + ggtitle("Rule diversity"))
 ggsave(plot_srv_institutional_diversity, file=paste0(pathImages, "plot_srv_institutional_diversity.png"), units='cm', width=4, height=2.5, scale=3)
 # PLOT GOV CONSOLIDATION
-(plot_gov_consolidation <- make_plot_size_by_success(mw[,.(perf_factor, pop_size_factor, pop_size_factor, aud_users, aud_admin, aud_total=aud_users+aud_admin+aud_none)], c("aud_admin","aud_total"), gov_mean_proportion_1, ggmore=ggel_govaud2, reps=100, ggtext="%", ggguide="none", ggrug=FALSE) + full_data_rug + ggtitle("Consolidation (%)") )
+(plot_gov_consolidation <- make_plot_size_by_success(mw[,.(perf_factor, pop_size_factor, pop_size_factor, ratio_aud)], c("ratio_aud"), gov_mean, ggmore=ggel_govaud2, reps=100, ggtext="%", ggguide="none", ggrug=FALSE) + full_data_rug + ggtitle("Consolidation (%)") )
 ggsave(plot_gov_consolidation, file=paste0(pathImages, "plot_gov_consolidation.png"), units='cm', width=4, height=2.5, scale=3)
 
 
