@@ -1,7 +1,7 @@
 pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
 source(paste0(pathLocal,"header_redditscrape.r"))
-source(paste0(pathLocal,"lib_step6_analysis.r"))
 source(paste0(pathLocal,"plugin_classes.r"))
+source(paste0(pathLocal,"lib_step6_analysis.r"))
 
 ### lOAD DATA
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
@@ -111,11 +111,15 @@ mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 mw[,yrug:=(log2(ifelse(y>100, 100, y)+1)+1.0)*0.7+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.4+rnorm(nrow(.SD),sd=0.02)]
 ### resource types
-mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld), total_aud=sum(aud_users,aud_admin), ratio_aud=(aud_admin)/sum(aud_users,aud_admin)),by=.(srv_addr)]
+indc8 <- function(x)ifelse((x>0),1,0)  ### indicator function
+mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld), total_aud=sum(aud_users,aud_admin), ratio_aud=(aud_admin)/sum(aud_users,aud_admin), count_res_type=indc8(res_grief)+ indc8(res_ingame)+ indc8(res_realworld)),by=.(srv_addr)]
 #this introduces NA's because many servers have total_res == res_grief + res_ingame + res_realworld == 0
 mw[total_res==0,':='(pct_grief=0, pct_ingame=0, pct_realworld=0)]
 mw[total_aud==0,':='(ratio_aud=0)]
-mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld)))),by=.(srv_addr)]
+### i dedied not to include admintools as an "instiuttion"
+mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld))), count_inst_type=indc8(cat_chat)+indc8(cat_informational)+indc8(cat_economy)+indc8(cat_admintools+cat_webadmin)-indc8(cat_admintools+cat_webadmin)),by=.(srv_addr)]
+mw[,administration:=sum(cat_admintools),by=.(srv_addr)]
+mw[,behavior_management:=sum(cat_antigrief),by=.(srv_addr)]
 # SAMPLING
 ### split data up
 ### notes:
@@ -130,3 +134,5 @@ mw <- mw_train
 
 ### SAVE eVERYTING
 saveRDS(mw, paste0(pathData, "step6_servers_wide_govanalysis.rds"))
+saveRDS(mw_test, paste0(pathData, "step6_servers_wide_govanalysis_test.rds"))
+saveRDS(mw_full, paste0(pathData, "step6_servers_wide_govanalysis_full.rds"))

@@ -202,10 +202,10 @@ gov_entropy_diversity <- function(data, i_samp) {
 #devtools::install_github("tillbe/jsd")
 library(jsd)
 library('proxy')
-gov_dist <- function(data, i_samp) {
+gov_dist <- function(data, i_samp, distf=NA) {
     samp_size <- ncol(data) ### this is a bit les unproper, but 
     samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
-    n <- 10
+    n <- 100
     if(nrow(data[i_samp]) < samp_size) {
         diversity <- numeric()
     }
@@ -213,11 +213,14 @@ gov_dist <- function(data, i_samp) {
         dists <- rep(0, n)
         for (i in 1:n) {
             idxs <- sample(i_samp, 2) #i_sampl should come shuffled, but just in case ...
+            if (!is.function(distf) | is.na(distf)) {
+                distf = function(d) { proxy::dist( d , method="simple matching") }
+            }
             #dists[i] <- hamming( data[ idxs[1], ] , data[ idxs[2], ] )
             #dists[i] <- dist( data[ idxs, ] , method="cosine")
             #dists[i] <- dist( apply(data[ idxs, ] + 1, 1, prop.table) , method="Kullback")
             #dists[i] <- dist( data[ idxs, ] , method="Manhattan")
-            dists[i] <- dist( data[ idxs, ] , method="simple matching")
+            dists[i] <- distf(data[ idxs, ])
             #dists[i] <-  data[idxs,] %>% apply(2, diff) %>% abs() %>% sum() ## "taxicab" distance or L1
             #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% log1p() %>% sum()
             #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% (function(x){ifelse(x==0,0,1)})() %>% sum()

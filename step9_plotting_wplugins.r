@@ -30,12 +30,12 @@ for (i in 1:3){
 print(plot_gov_resources_ratio <- make_plot_size_by_success(mw, c("entropy_res"), gov_mean_narm, ggmore=ggel_lowbad, ggguide=guide_legend("Randge of things being governed"), reps=100))
 
 ### NOW REDO IN ONE SPECIALIST DATATABLE
-mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_ingame, res_realworld, total_res, entropy_res, pct_grief, pct_ingame, pct_realworld)]
+mwres <- mw[,.(srv_addr, srv_max, pop_size_factor, perf_factor, res_grief, res_ingame, res_realworld, count_res_type, total_res, entropy_res, pct_grief, pct_ingame, pct_realworld)]
 ## this gives NAs if there are no res_ plguins in any category. so it goes.
 #(plot_gov_res <- make_plot_size_by_success(mwres, "res_grief", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000))
 #(plot_gov_res <- make_plot_size_by_success(mwres, "pct_grief", gov_mean_narm , ggmore=ggel_gov_rat, ggguide="none", reps=1000))
 ### institution by size:
-gg <- melt(mwres, id.vars = c("srv_addr", "srv_max", "pop_size_factor", "perf_factor", "total_res"),  measure.vars = patterns("^res_", "^pct_"), variable.name = 'resourcegov', value.name='resourcegov_count', variable.factor=FALSE)
+gg <- melt(mwres, id.vars = c("srv_addr", "srv_max", "pop_size_factor", "perf_factor", "count_res_type", "total_res"),  measure.vars = patterns("^res_", "^pct_"), variable.name = 'resourcegov', value.name='resourcegov_count', variable.factor=FALSE)
 setnames(gg, c('resourcegov_count1', 'resourcegov_count2'), c('resourcegov_count', 'resourcegov_pct'))
 gginclude <- c("res_grief", "res_ingame", "res_realworld")
 #gg <- gg[resourcegov %in% gginclude]
@@ -63,6 +63,7 @@ ggsave(plot_resgov_spectrum, file=paste0(pathImages, "plot_resgov_spectrum.png")
 # plot the four "complexity"results together: intensity, consolidation, specialization, diversity within 
 # PLOT GOV INTENSITY
 (plot_gov_scaling <- make_plot_size_by_success(mw, "total_res", gov_median , ggmore=ggel_gov, ggguide="none", reps=1000) + ggtitle("Intensity"))
+(plot_gov_scaling <- make_plot_size_by_success(mw, "count_res_type", gov_median , ggmore=ggel_gov, ggguide="none", reps=1000) + ggtitle("Intensity"))
 ggsave(plot_gov_scaling, file=paste0(pathImages, "plot_gov_scaling.png"), units='cm', width=3.25, height=2.5, scale=3)
 # PLOT GOV SPECIALIZATION
 (plot_gov_specialization <- make_plot_size_by_success(mw, "plugin_specialization", gov_mean_narm , ggmore=ggel_gov, ggguide="none", reps=1000) + ggtitle("Specialization"))

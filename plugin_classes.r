@@ -1,4 +1,175 @@
+pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
+source(paste0(pathLocal,"local_settings.R"))
+
+library(magrittr)
+library(testthat)
+
 asdf <- data.frame
+
+### functions
+
+### ### this is a function for getting a template to hand code most popular plugins
+writeBlankFeatureCodingTable <- function(sfeat, filename) {
+    ### filter plugins used only once or twice 
+    #write.csv(unique(sfeat[feat_count > 2,list( feat_count, feat_url, action_admin_up=0, action_other_down=0, grief=0, inoutworld=0, inst=0, normpath=0, forbid=0, boundary=0, position=0, choice=0, info=0, infopath=0, aggregation=0, payoff=0, scope=0, shop=0, tech=0, game=0, loopadmin=0, poly=0, property=0, chat=0, apply=0, resource=0),by=.(feat_code)][order(-feat_count)]), file=filename)
+    write.csv(unique(sfeat[feat_count > 2,list( feat_name=feat, feat_count, feat_url, blacklist='', foreign='', gov_auto=(ifelse(!is.na(cat_admintools) & (cat_admintools == 1 | cat_antigrief == 1 | cat_chat == 1 | cat_economy == 1 | cat_informational ==1  ), 1,0)), gov_hand='', resource=ifelse(!is.na(cat_antigrief) & (cat_antigrief == 1) ,'grief',''), audience='', upkeep='', enable_forbid='', institution=ifelse(!is.na(cat_economy) & cat_economy == 1 & cat_chat != 1, 'shop',''), actionsituation='', notes='' ), by=.(feat_code)][order(-feat_count)]), file=filename, row.names=FALSE)
+}
+
+
+oldDefaultFile <- paste0(pathData, "plugin_codes_byhand20170727.csv")
+get_plugin_codes <- function() {
+    ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugin_widehandcodes_rawXXX.csv  ~/projecto/research_projects/minecraft/redditcommunity/data/plugin_codes_byhand20160905XXX.csv
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160805.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv"), stringsAsFactors=FALSE))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160909.csv"), stringsAsFactors=FALSE))
+    plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20170727.csv"), stringsAsFactors=FALSE))
+    pcodes <- plugin_codes_byhand
+    #pcodes <- pcodes[1:(nrow(pcodes)-1),]
+    pcodes[,feat_count:=NULL]
+    pcodes[,notes:=NULL]
+    pcodes$foreign <- with(pcodes, ifelse(is.na(foreign), 0, 1))
+    pcodes$gov <- with( pcodes, ifelse(gov_auto==0 | gov_hand==0 | is.na(gov_hand), 0, 1))
+    pcodes$blacklist <- with( pcodes, ifelse(!is.na(blacklist) & blacklist == 1,1,0))
+    pcodes$blacklist_justmultiserver <- NULL
+    pcodes$blacklist_inclminigames <- NULL
+    pcodes$foreign <- NULL
+    pcodes$gov_auto <- NULL
+    pcodes$gov_hand <- NULL
+    pcodes$resource <- with(pcodes, ifelse(resource=='', 'noresource', resource) )
+    pcodes$audience <- with(pcodes, ifelse(audience=='', 'noaudience', audience) )
+    pcodes$upkeep <- with(pcodes, ifelse(upkeep=='', 'noupkeep', upkeep) )
+    pcodes$enable_forbid_user <- with(pcodes, ifelse(enable_forbid_user == "",0,enable_forbid_user) %>%
+                                      ifelse(enable_forbid_user == "\"+\"",1,.) %>%
+                                      ifelse(enable_forbid_user == "\"-\"",-1,.) %>%
+                                      as.numeric()
+                                      )
+
+    pcodes$enable_forbid_audience <- ifelse(pcodes$enable_forbid_audience == "",0,
+                                                         pcodes$enable_forbid_audience
+                                                  ) %>%
+                                    ifelse(pcodes$enable_forbid_audience == "\"+\"",1,.) %>%
+                                    ifelse(pcodes$enable_forbid_audience == "\"-\"",-1,.) %>%
+                                    as.numeric()
+    pcodes$institution <- with(pcodes, ifelse(institution=='', 'noinstitution', institution) )
+    pcodes$actionsituation <- with(pcodes, ifelse(actionsituation=='', 'noinstitution', actionsituation) )
+    pcodes$institution <- with(pcodes, ifelse(institution=='noinstitution', actionsituation, institution))
+    pcodes$actionsituation <- NULL
+    pcodes$institution <- with(pcodes, ifelse(institution=='action_space' & enable_forbid_user == 1, "action_space_up", institution))
+    pcodes$institution <- with(pcodes, ifelse(institution=='action_space' & enable_forbid_user == -1, "action_space_down", institution))
+    pcodes$institution <- with(pcodes, ifelse(institution=='monitor' & audience == 'users', "monitor_by_peer", institution))
+    pcodes$institution <- with(pcodes, ifelse(institution=='monitor' & audience == 'admin', "monitor_by_admin", institution))
+    pcodes$resource <- factor(pcodes$resource)
+    pcodes$audience <- factor(pcodes$audience)
+    pcodes$upkeep <- factor(pcodes$upkeep)
+    pcodes$institution <- factor(pcodes$institution)
+    m1 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ as.character(resource), value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m2 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ audience, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m3 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ upkeep, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m4 <- dcast(pcodes, formula = feat_code + feat_url + blacklist + gov + enable_forbid_user + enable_forbid_audience ~ institution, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    mm1 <- merge(m1, m2[,c(1,7:ncol(m2))], by='feat_code')
+    mm2 <- merge(m3, m4[,c(1,7:ncol(m4))], by='feat_code')
+    gg <- merge( mm1, mm2[,c(1,7:ncol(mm2))], by='feat_code')
+    gg <- asdt(gg)
+    ### I removed monitor from here, but i might want it back in t inthe future
+    setnames(gg, c("grief", "ingame", "noresource", "performance", "players", "realmoney", "attention", "noaudience", "users", "admin", "enable_forbid_user", "enable_forbid_audience", "noupkeep", "coarseauto", "coarsemanual", "fineauto", "finemanual", "noinstitution", "broadcast", "chat",  "privateproperty", "shop", "action_space", "action_space_up", "action_space_down", "boundary", "monitor_by_peer", "monitor_by_admin", "position_h", "position_v", "payoff"), c("res_grief", "res_ingame", "res_none", "res_performance", "res_players", "res_realmoney", "res_attention", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff"))
+    setcolorder(gg, c("feat_code", "feat_url", "blacklist", "gov", "res_none", "res_grief", "res_ingame", "res_performance", "res_players", "res_realmoney", "res_attention", "aud_none", "aud_users", "aud_admin", "actions_user", "actions_audience", "use_na", "use_coarseauto", "use_coarsemanual", "use_fineauto", "use_finemanual", "inst_none", "inst_broadcast", "inst_chat",  "inst_privateproperty", "inst_shop", "inst_action_space", "inst_action_space_up", "inst_action_space_down", "inst_boundary", "inst_monitor_by_peer", "inst_monitor_by_admin", "inst_position_h", "inst_position_v", "inst_payoff"))
+    ### now merge original columns back into the dmmy variable ones
+    gg <- merge(gg, pcodes[,.(feat_code, resource, audience, upkeep, institution)], by='feat_code')
+    ### sets of columns are mutually exclusive, making validity tests easy
+    expect_true(all(rowSums(gg[,5:11,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,12:14,with=FALSE]) == 1))
+    expect_true(all(gg[,actions_user %in% c(-1,0,1)]))
+    expect_true(all(gg[,actions_audience %in% c(-1,0,1)]))
+    expect_true(all(rowSums(gg[,17:21,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,22:35,with=FALSE]) == 1))
+    return(gg )
+}
+
+get_plugin_codes_201708 <- function(filename=oldDefaultFile) {
+    ###   cp /Users/sfrey/Downloads/Categorized\ Minecraft\ Servers\ -\ plugin_widehandcodes_rawXXX.csv  ~/projecto/research_projects/minecraft/redditcommunity/data/plugin_codes_byhand20160905XXX.csv
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160805.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160826.csv")))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160905.csv"), stringsAsFactors=FALSE))
+    #plugin_codes_byhand <- as.data.table(read.csv(file=paste0(pathData, "plugin_codes_byhand20160909.csv"), stringsAsFactors=FALSE))
+    plugin_codes_byhand <- as.data.table(read.csv(file=filename, stringsAsFactors=FALSE))
+    pcodes <- plugin_codes_byhand
+    #pcodes <- pcodes[1:(nrow(pcodes)-1),]
+    pcodes$blacklist <- with( pcodes, ifelse(!is.na(blacklist) & blacklist == 1,1,0))
+    pcodes$resource <- with(pcodes, ifelse(resource=='' | resource=='general', 'noresource', resource) %>% factor() )
+    pcodes$game_mechanic <- with(pcodes, ifelse(is.na(game_mechanic), 0, game_mechanic))
+    pcodes$gov <- with(pcodes, ifelse((game_mechanic == 1) | (resource=='noresource'), 0, 1))
+	pcodes$consolidation <- with(pcodes, ifelse(consolidation == "0" & ((gov == 1 ) | ( blacklist == 0)),"consolidation_not",consolidation))
+	pcodes$rule_type <- with(pcodes, ifelse(rule_type=='' | rule_type=='0' , 'no_rule_type', rule_type)  %>% factor() )
+	pcodes$consolidation <- with(pcodes, ifelse(consolidation == "1","consolidation_pos",consolidation))
+	pcodes$consolidation <- with(pcodes, ifelse(consolidation == "" | is.na(consolidation) | (consolidation %ni% c("consolidation_pos", "consolidation_not")),"consolidation_nocode",consolidation))
+	pcodes$consolidation <- factor(pcodes$consolidation )
+	pcodes$one_many <- with(pcodes, ifelse(one_many == "","no_one_many",one_many) %>% factor())
+    #pcodes[,feat_count:=NULL]
+    pcodes[,notes:=NULL]
+    pcodes$gov_auto <- NULL
+    pcodes$game_mechanic <- NULL
+	if ("feat_name" %in% names(pcodes)) { pcodes[,feat_name:=NULL] }
+	if ("institution" %in% names(pcodes)) {
+		pcodes$institution <- NULL
+		pcodes$actionsituation <- NULL
+	}
+
+    m1 <- dcast(pcodes, formula = feat_code + feat_count + feat_url + blacklist + gov ~ as.character(resource), value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m2 <- dcast(pcodes, formula = feat_code + feat_count + feat_url + blacklist + gov ~ consolidation, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m3 <- dcast(pcodes, formula = feat_code + feat_count + feat_url + blacklist + gov ~ one_many, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    m4 <- dcast(pcodes, formula = feat_code + feat_count + feat_url + blacklist + gov ~ rule_type, value.var="feat_code", fun.aggregate = function(x) (length(x) > 0) + 0.0)
+    mm1 <- merge(m1, m2[,c(1,6:ncol(m2)),with=F], by='feat_code') 
+    mm2 <- merge(m3, m4[,c(1,6:ncol(m4)),with=F], by='feat_code')
+    gg <- merge( mm1, mm2[,c(1,6:ncol(mm2)),with=F], by='feat_code') 
+    gg <- asdt(gg)
+    ### I removed monitor from here, but i might want it back in t inthe future
+    setnames(gg, c("grief", "ingame", "realworld", "noresource"
+				   , "consolidation_pos", "consolidation_not", "consolidation_nocode"
+				   , "many", "one", "no_one_many"
+				   , "no_rule_type", "broadcast", "chat",  "mod_action", "player_actions", "monitor", "payoff", "shop", "boundary", "playertypes", "privateproperty"
+				   ), c("res_grief", "res_ingame", "res_realworld", "res_none"
+				   , "consolidation_pos", "consolidation_not", "consolidation_nocode"
+				   , "mass_many", "mass_one", "mass_none"
+				   , "inst_none", "inst_broadcast", "inst_chat",  "inst_mod_actions", "inst_player_actions", "inst_monitor", "inst_payoff", "inst_shop", "inst_boundary", "inst_playertypes", "inst_privateproperty"
+				   ))
+    setcolorder(gg, c("feat_code", "feat_count", "feat_url", "blacklist", "gov", 
+					  "res_grief", "res_ingame", "res_realworld", "res_none"
+				   , "consolidation_pos", "consolidation_not", "consolidation_nocode"
+				   , "mass_many", "mass_one", "mass_none"
+				   , "inst_broadcast", "inst_chat", "inst_privateproperty", "inst_shop", "inst_mod_actions", "inst_player_actions", "inst_monitor", "inst_payoff", "inst_boundary", "inst_playertypes", "inst_none" ))
+    ### now merge original columns back into the dmmy variable ones
+    gg <- merge(gg, pcodes[,.(feat_code, resource, consolidation, one_many, rule_type)], by='feat_code')
+    ### sets of columns are mutually exclusive, making validity tests easy
+    expect_true(all(rowSums(gg[,6:9,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,10:12,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,13:15,with=FALSE]) == 1))
+    expect_true(all(rowSums(gg[,16:26,with=FALSE]) == 1))
+    return(gg )
+}
+
+if(0){
+	###intercoder reliability
+	book1 <- get_plugin_codes_201708(filename=paste0(pathData, "plugin_codes_byhand20170812.csv"))
+	book2 <- get_plugin_codes_201708(filename=paste0(pathData, "NahidCodebookBlank.xlsx.csv"))
+	book1 <- book1[grepl("plugin_*", feat_code)]
+	book1 <- book1[order(-feat_count)][1:101]
+	book2 <- book2[order(-feat_count)][1:101]
+
+	books <- cbind(book1, book2)
+	setnames(books, c(paste("b1", names(book1), sep='_'), paste("b2", names(book2), sep='_')))
+	books[,count:= 1]
+	xtabs(count ~ b1_gov + b2_gov, asdf(books))
+	xtabs(count ~ b1_resource + b2_resource, asdf(books[b1_gov & b2_gov]))
+	xtabs(count ~ b1_one_many + b2_one_many, asdf(books[b1_gov & b2_gov]))
+	xtabs(count ~ b1_consolidation + b2_consolidation, asdf(books[b1_gov & b2_gov]))
+	xtabs(count ~ b1_rule_type + b2_rule_type, asdf(books[b1_gov & b2_gov]))
+	xtabs(count ~ b1_resource + b2_resource, asdf(books))
+	xtabs(count ~ b1_one_many + b2_one_many, asdf(books))
+	xtabs(count ~ b1_consolidation + b2_consolidation, asdf(books))
+}
+
+
 juicy_words = c('ban', 'banned', 'whitelisted', 'age', '18', '18+', 'owner', 'owners', 'mods', 'moderators', 'admins', 'admin', 'moderator', 'bans', 'faction', 'community', 'harass', 'threat', 'threatening', 'adult', 'friendly', 'fair', 'unfair', 'grief', 'griefs', 'griefing', 'respect', 'respectful', 'rollback', 'spam', 'spamming', 'swearing', 'swear', 'cheat', 'cheats' , "cheating" , "hack" , "hacks" , "hacking" , "steal" , "stealing" , "tnt", "fire" , "member" , "members" , "blacklist" , "greylist" , "rules" , "staff" , "abuse" , "abusers" , "abuser" , "forum" , "forums" , "wiki" , "website" , "subreddit" , "ddos" , "location" , "locale", "shop", "forms", "form", "application", "docs", "apply", "official", "site", "team", 'join', "voip")
 #juicy_words = c('ban', 'banned', 'whitelisted', 'age', '18', '18+', 'owner', 'owners', 'mods', 'moderators', 'admins', 'admin', 'moderator', 'bans', 'faction', 'community', 'harass', 'threat', 'threatening', 'mature', 'adult', 'friendly', 'fair', 'unfair', 'grief', 'griefs', 'griefing', 'respect', 'respectful', 'rollback', 'spam', 'spamming', 'swearing', 'swear', 'cheat', 'cheats' , "cheating" , "hack" , "hacks" , "hacking" , "steal" , "stealing" , "tnt", "fire" , "member" , "members" , "whitelist" , "blacklist" , "greylist" , "rules" , "staff" , "abuse" , "abusers" , "abuser" , "forum" , "forums" , "wiki" , "website" , "subreddit" , "ddos" , "location" , "locale", "shop", "forms", "form", "application", "docs", "apply", "official", "site", "team", 'join', "voip", "skype", "mumble", "teamspeak")
 
