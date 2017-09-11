@@ -3,6 +3,9 @@ source(paste0(pathLocal,"header_redditscrape.r"))
 source(paste0(pathLocal,"plugin_classes.r"))
 source(paste0(pathLocal,"lib_step6_analysis.r"))
 
+library(entropy) ### use small-n bias correction, Chao-Shen, which is fast and comparable to NSB  ##  NOOOOOOO: CS is awful: using shirnkage
+library(LambertW)
+
 ### lOAD DATA
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
 splugins <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
@@ -12,18 +15,11 @@ pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_met
 ### CUT SERVERS WITH EVIDENCE OF HACKED apiS THAT CAN UNDERMINE COMMUNITY AND OTHER SUCCESS MEASUERS
 spings_clean <- spings[srv_addr %ni% spings[hackedapi == TRUE,unique(srv_addr)]]
 #spings_clean <- spings
-if (TRUE ) {  ### minmally comparable
-    spings_clean <- spings_clean[srv_max >0]  ### due to a now-fixed oversight, hackedapi failed to exclude the inappropriate case that srv_max == 0.
-    spings_clean <- spings_clean[srv_addr %ni% c("131.153.5.218", "alpa.playmcm.net", "playmcm.net", "pvp.originmc.org")]
-    #mc <- mc[!hackedapi]
-    #mc <- mc[srv_max <= 1000]  ### don't need ot delete it, can just reset it to the highest realistic value
-    #mc <- mc[nmaxpop <= 1000]  ### its bad when admins edit this to be unrealistic, but it doesn't affect me: bounding values I actually measure catches everything that this catches.
-    #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] ### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
-}
+    #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] 
 
 ### PICK DEPENDENT
 sfeat_dep <- buildPickDependent(spings_clean, dependent= 'ncomm4visits_bestweek')
-maxPopulationEverObserved <- sfeat_dep[order(-nmaxpop), unique(nmaxpop)][1]
+maxPopulationEverObserved <- sfeat_dep[order(-nmaxpop), unique(nmaxpop)][1]### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
 sfeat_dep[srv_max >=  maxPopulationEverObserved, ':='(srv_max=  maxPopulationEverObserved, srv_max_log=log2(  maxPopulationEverObserved+1))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data. I must do this after buildPickDependent instead of before because more servers that are subjectively fake servers are not being caught by hackedapi, and calculating this max after the merge inciedentally catches more of those.
 
 if (0) {  ### for building blank feature table
@@ -40,10 +36,12 @@ if (0) {  ### for building blank feature table
 mc <- sfeat_dep
 mc <- filterDataSetDown(mc, cutNonVanilla=FALSE, cutNonPositiveDependent=FALSE, featureCountMin=0)
 mw <- mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max", "srv_max_bak", "srv_details", "dataset_source", "jubilees", "y", "ylog", "nuvisits12", "nvisitsobs12", "nvisitsunobs", "srv_votes", "srv_repquery", "srv_repplug", "srv_repsample", "weeks_up_total", "weeks_up_todate", "date_ping_1st", "date_ping_lst", "srv_retired", "plugin_count", "keyword_count", "tag_count", "sign_count")]
+## standardize (not an theroetically important predictor wiht a wierd range)
 
 # ENRICH FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256", ">256"), ordered_result=TRUE, right=TRUE)]
+#mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
 mw[,yrug:=(log2(ifelse(y>150, 150, y)+1)+1.0)*1.0+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.25+rnorm(nrow(.SD),sd=0.02)]
 
@@ -53,9 +51,9 @@ mw_train <- mw_split$train
 mw_test <- mw_split$test
 mw_full <- mw
 ### MAIN DATASET
-#mw <- mw_full
-mw <- mw_train
-saveRDS(mw, paste0(pathData, "step6_servers_wide_tallanalysis.rds"))
+#mw <- mw_train
+mw <- mw_full
+saveRDS(mw, paste0(pathData, "step6_servers_tall_analysis.rds"))
 
 
 
@@ -92,7 +90,6 @@ mw[,sum_resource:=rowSums(.SD[, grep("^res_[^n]", names(mw), value=TRUE), with=F
 mw[,paste("sum", grep("^res_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, grep("^res_", names(mw), value=TRUE), with=F], sum)]
 mw[,paste("sum", grep("^inst_", names(mw), value=TRUE), sep='_'):=lapply(.SD[, grep("^inst_", names(mw), value=TRUE), with=F], sum)]
 ### add a column measuring the diversity of solutions used by a server
-library(entropy) ### use small-n bias correction, Chao-Shen, which is fast and comparable to NSB  ##  NOOOOOOO: CS is awful: using shirnkage
 mw[,srv_entropy:={inst_dist<-.SD[,grep("^inst_[^n]", names(mw)),with=FALSE][1]; inst_dist<-(inst_dist+0.000001)/(sum(inst_dist)+0.000001); sum(sapply(inst_dist, entropy_calc)) }, by=srv_addr]
 # JUST FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
 ### add variables unique to the wide format
@@ -104,7 +101,8 @@ mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,8,12), labels=c("<4",
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024"), ordered_result=TRUE, right=TRUE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
-mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
+mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256", ">256"), ordered_result=TRUE, right=TRUE)]
+#mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,1,2,4,6,8), labels=c("\u22641", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
 ### these two are for the marginal density plots
@@ -112,14 +110,29 @@ mw[,yrug:=(log2(ifelse(y>100, 100, y)+1)+1.0)*0.7+rnorm(nrow(.SD),sd=0.02)]
 mw[,xrug:=(log2(srv_max+1)+1.0)*0.4+rnorm(nrow(.SD),sd=0.02)]
 ### resource types
 indc8 <- function(x)ifelse((x>0),1,0)  ### indicator function
-mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), pct_grief=sum(res_grief)/sum(res_grief, res_ingame, res_realworld), pct_ingame=sum(res_ingame)/sum(res_grief, res_ingame, res_realworld), pct_realworld=sum(res_realworld)/sum(res_grief, res_ingame, res_realworld), total_aud=sum(aud_users,aud_admin), ratio_aud=(aud_admin)/sum(aud_users,aud_admin), count_res_type=indc8(res_grief)+ indc8(res_ingame)+ indc8(res_realworld)),by=.(srv_addr)]
+mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), count_res_type=indc8(res_grief)+ indc8(res_ingame)+ indc8(res_realworld), total_inst=(cat_chat+cat_informational+cat_economy+cat_admintools+cat_webadmin), count_inst_type=indc8(cat_chat)+indc8(cat_informational)+indc8(cat_economy)+indc8(cat_admintools+cat_webadmin), total_aud=sum(aud_users,aud_admin)),by=.(srv_addr)]
+mw[,':='(pct_grief=sum(res_grief)/total_res, pct_ingame=sum(res_ingame)/total_res, pct_realworld=sum(res_realworld)/total_res, pct_ichat=cat_chat/total_inst, pct_iinformational=cat_informational/total_inst, pct_ieconomy=cat_economy/total_inst, pct_iadmin=sum(cat_admintools + cat_webadmin)/total_inst, ratio_aud=(aud_admin)/total_aud),by=.(srv_addr)]
 #this introduces NA's because many servers have total_res == res_grief + res_ingame + res_realworld == 0
 mw[total_res==0,':='(pct_grief=0, pct_ingame=0, pct_realworld=0)]
 mw[total_aud==0,':='(ratio_aud=0)]
-### i dedied not to include admintools as an "instiuttion"
-mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld))), count_inst_type=indc8(cat_chat)+indc8(cat_informational)+indc8(cat_economy)+indc8(cat_admintools+cat_webadmin)-indc8(cat_admintools+cat_webadmin)),by=.(srv_addr)]
-mw[,administration:=sum(cat_admintools),by=.(srv_addr)]
+mw[total_inst==0,':='(pct_ichat=0, pct_iinformational=0, pct_ieconomy=0, pct_iadmin=0)]
+### i dedied not to include admintools as an "institution"
+mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld))), entropy_inst=as.numeric(entropy_calc(c(pct_ichat, pct_iinformational, pct_ieconomy, pct_iadmin)))),by=.(srv_addr)]
+mw[,cat_admin:=sum(cat_admintools + cat_webadmin),by=.(srv_addr)]
 mw[,behavior_management:=sum(cat_antigrief),by=.(srv_addr)]
+setnames(mw, c("total_res", "ratio_aud", "count_res_type", "count_inst_type"), c( "governance_intensity", "consolidation", "governance_scope", "rule_diversity"))
+
+#mw <- mw[y>0]
+mw[,success_dummy:=ifelse(y<=1,0,1)]
+mw[,success_dummy0:=ifelse(y==0,1,0)]
+mw[,success_dummy1:=ifelse(y==1,1,0)]
+mw[,y_norm:=as.numeric(Gaussianize(y,type="h"))]
+#test_normality(mw[,y_norm])
+#mw[,srv_max_norm:=as.numeric(Gaussianize(srv_max,type="h"))]
+mw[,srv_max_norm:=as.numeric(Gaussianize(mw$srv_max+rnorm(sd=2,nrow(mw)),type="hh"))]
+#test_normality(mw[,srv_max_norm])
+#mw[is.na(plugin_specialization),plugin_specialization:=9] ### via AMelia, which just imputed all na's to 9. 
+#mw[is.na(plugin_specialization),plugin_specialization:=NA] ### just compare to the missing values by anova.  don't impute.
 # SAMPLING
 ### split data up
 ### notes:
@@ -129,10 +142,8 @@ mw_train <- mw_split$train
 mw_test <- mw_split$test
 mw_full <- mw
 ### MAIN DATASET
-#mw <- mw_full
-mw <- mw_train
+#mw <- mw_train
+mw <- mw_full
 
 ### SAVE eVERYTING
-saveRDS(mw, paste0(pathData, "step6_servers_wide_govanalysis.rds"))
-saveRDS(mw_test, paste0(pathData, "step6_servers_wide_govanalysis_test.rds"))
-saveRDS(mw_full, paste0(pathData, "step6_servers_wide_govanalysis_full.rds"))
+saveRDS(mw_full, paste0(pathData, "step6_servers_wide_govanalysis.rds"))

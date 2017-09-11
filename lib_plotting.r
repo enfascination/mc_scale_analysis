@@ -2,6 +2,7 @@ library(boot)
 library(scales)
 library(ggthemes)
 library(cowplot)
+library(testthat)
 
 ### plotting function
 make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=geom_blank(), ggguide = guide_legend(reverse=TRUE), reps=0, return_plot=T, facetting=c(), unscaledyvar=TRUE, xvar="pop_size_factor", yvar="perf_factor", ggtext=TRUE, ggrug=TRUE, ...) {
@@ -39,8 +40,8 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
 			}
         }
         if (ggrug) {
-            #mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
-            mwp1 <- mwp1 + geom_rug(data=mw_train, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*1.0+0.99+rnorm(length(y),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
+            #mwp1 <- mwp1 + geom_rug(data=mwdata, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*0.83+1.1+rnorm(nrow(mwdata),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
+            mwp1 <- mwp1 + geom_rug(data=mwdata, mapping=aes(x=log2(srv_max+1)/2-0.2, y=log2(y+1)/srv_max_log*1.0+0.99+rnorm(nrow(mwdata),sd=0.05)), col=rgb(0.7,0.7,0.7,alpha=0.2),sides="tl") 
         }
         return(mwp1)
     }
@@ -241,3 +242,47 @@ cosine_dist <- function(d1, d2) {
 }
 euclidian <- function(d1, d2) {sum((d1 - d2)^2)^0.5 %>% return() }
 minkowski <- function(d1, d2, p) {sum(abs(d1 - d2)^p)^(1/p) %>% return() }
+
+
+
+# Bootstrap 95% CI for regression coefficients 
+### https://stats.stackexchange.com/questions/83012/how-to-obtain-p-values-of-coefficients-from-bootstrap-regression
+library(boot)
+# function to obtain regression weights 
+bsnb <- function(formula, data, indices) {
+	d <- data[indices,] # allows boot to select sample 
+	fit <- glm.nb(formula, data=d)
+	return(c(coef(fit), tidy(fit)$std.error) )
+}
+### display bootstrap outcomes (hci's with intervals and significance at a glance
+crunch_boot <- function (bt, typeci="norm") {
+	#bci <- (boot.ci(bt, index=1, type="norm", conf=0.99))$normal[2:3]
+	nrout <- ((length(bt$t0)-1)/2+1)
+	mainout <- tidy(bt)[1:nrout,]
+	bci_norm <- t(sapply(1:nrout, function(x) boot.ci(bt, index=x, type="norm", conf=0.95)$normal[2:3]))
+	if(typeci=="stud") {
+		bci_stud <- t(sapply(1:nrout, 
+			function(x) {
+				if (x==1) {
+					rval <- boot.ci(bt, index=c(x), type="norm", conf=0.95)$normal[2:3]
+				} else {
+					rval <- boot.ci(bt, index=c(x,(nrout-1+x)), type="stud", conf=0.95)$student[4:5]
+				}
+			return(rval)
+			}))
+		out <- cbind(mainout
+					 , lcis=bci_stud[,1], hcis=bci_stud[,2]
+					 , signif1 = abs(mainout$statistic) > (mainout$"std.error" * 2.5)
+					 , signif2=((0 < bci_norm[,1]) | (0 > bci_norm[,2]) ) 
+					 , signif3=((0 < bci_stud[,1]) | (0 > bci_stud[,2]) ) 
+					 )
+	} else {
+		bci_norm <- t(sapply(1:nrout, function(x) boot.ci(bt, index=x, type="norm", conf=0.95)$normal[2:3]))
+		out <- cbind(mainout
+					 , lci=bci_norm[,1], hci=bci_norm[,2]
+					 , signif1 = abs(mainout$statistic) > (mainout$"std.error" * 2.5)
+					 , signif2=((0 < bci_norm[,1]) | (0 > bci_norm[,2]) ) 
+					 )
+	}
+	return( out )
+}

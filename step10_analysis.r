@@ -6,115 +6,89 @@
 ### INITIALIZE GLOBALS
 pathLocal <- '/Users/sfrey/projecto/research_projects/minecraft/redditcommunity/'
 source(paste0(pathLocal,"local_settings.R"))
+source(paste0(pathLocal,"lib_step6_analysis.r"))
 source(paste0(pathLocal,"lib_plotting.r"))
-library(LambertW)
 library(DHARMa)
 library(proxy)
+library(broom)
+library(fitdistrplus)
 
 mw <- readRDS(paste0(pathData, "step6_servers_wide_govanalysis.rds"))
-#if ("success" %ni% names(mw)) { mw[,success:=y/srv_max] }
-#if ("total_aud" %ni% names(mw)) { 
-	#mw[,':='(total_aud=sum(aud_users,aud_admin), ratio_aud=aud_admin/sum(aud_users,aud_admin)),by=srv_addr] 
-	#mw[total_aud==0,ratio_aud:=0] 
-#}
-setnames(mw, c("total_res", "ratio_aud", "aud_admin", "count_res_type", "entropy_res", "count_inst_type", "srv_entropy" ), c( "governance_intensity", "consolidation", "consolidation2", "governance_scope", "governance_scope2", "rule_diversity", "rule_diversity2"))
-#mw <- mw[y>0]
-mw[,success_dummy:=ifelse(y<=1,0,1)]
-mw[,success_dummy0:=ifelse(y==0,1,0)]
-mw[,success_dummy1:=ifelse(y==1,1,0)]
-mw[,plugin_specialization:=1/plugin_specialization]
-mw[,y_norm:=Gaussianize(y,type="h")]
-#test_normality(mw[,y_norm])
-mw[,srv_max_norm:=Gaussianize(srv_max,type="h")]
-#test_normality(mw[,srv_max_norm])
+print(summary(srvnb_full <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*governance_intensity  + srv_max_log*plugin_specialization + srv_max_log*rule_diversity , mw)))
 
 ### reduce
-mw <- mw[,.(y_norm, srv_max_norm, y, ylog, success_dummy0, success_dummy1, srv_max, srv_max_log, srv_details, dataset_reddit, dataset_mcs_org, date_ping_int, weeks_up_todate, governance_intensity, plugin_specialization, rule_diversity, consolidation, consolidation2, governance_scope, governance_scope2, dataset_source, administration, behavior_management, rule_diversity2, perf_factor, pop_size_factor, cat_chat, cat_informational, cat_economy, cat_admin=(cat_admintools+cat_webadmin), plugin_count )]
-### deal with NAs (or not)
-#mw[is.na(plugin_specialization),plugin_specialization:=mw[!is.na(plugin_specialization),sample(plugin_specialization,sum(is.na(mw$plugin_specialization)),replace=T)]]
+mw <- mw[,.(srv_addr, y_norm, y, ylog, success_dummy0, success_dummy1, srv_max, srv_max_log, srv_max_norm, srv_details, dataset_reddit, dataset_mcs_org, date_ping_int, weeks_up_todate, governance_intensity, plugin_specialization, rule_diversity, governance_scope, dataset_source, administration=cat_admin, perf_factor, pop_size_factor, cat_chat, cat_informational, cat_economy, cat_admin=(cat_admintools+cat_webadmin), plugin_count , nuvisits12, nvisitsobs12, nvisitsunobs, res_grief, res_ingame, res_realworld, pct_grief, pct_ingame, pct_realworld)]
+print(nrow(mw))
+print(mw[,.(max(srv_max), max(y), max(nuvisits12), max(nvisitsobs12), max(nvisitsunobs))])
 
+### negative binomial (beats glm(family=poisson()) and zinb() on AIC and logLik
+### plots clean QQ and constant variance in residuals
+summary(srvnb_ctl <- glm.nb(y ~  srv_details + date_ping_int + weeks_up_todate + srv_max_log, mw))
+print(summary(srvnb_full <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*governance_intensity  + srv_max_log*plugin_specialization + srv_max_log*rule_diversity , mw)))
+### other tests
+print(anova(srvnb_ctl , srvnb_full ))
+plotSimulatedResiduals(simulationOutput <- simulateResiduals(fittedModel = srvnb_ctl, n = 250))
+plotSimulatedResiduals(simulationOutput <- simulateResiduals(fittedModel = srvnb_full, n = 250))
+#summary(srvpoisson <- glm(y ~  srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_norm, mw, family="poisson"))
+#summary(srvzi <- zeroinfl(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_norm | 1 , data = mw, dist = "negbin", EM = TRUE))
+
+### "univariate" after controls
+print(summary(srvnb_p1 <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope, mw)))
+print(summary(srvnb_p1 <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_intensity, mw)))
+print(summary(srvnb_p1 <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*plugin_specialization, mw)))
+print(summary(srvnb_p1 <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*rule_diversity, mw)))
+
+### ASSUMPTION AND DISTRIBUIONAL CHECKS
 ### lm unsatisfactory
 summary(srvlm_ctl <- glm.nb(y_norm ~ success_dummy0 + success_dummy1 + srv_details + date_ping_int + weeks_up_todate , mw))
-summary(srvlm_full <- glm.nb(y_norm ~ success_dummy0 + success_dummy1 + srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
+summary(srvlm_full <- glm.nb(y_norm ~ success_dummy0 + success_dummy1 + srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*governance_intensity +srv_max_log*plugin_specialization, mw))
 anova(srvlm_ctl, srvlm_full)
+plotSimulatedResiduals(simulationOutput <- simulateResiduals(fittedModel = srvlm_ctl, n = 250))
 
 ### find good distribution
 gofstat(fitdist((mw$y),c("norm"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("lnorm"),discrete=T,method="mle"))
-gofstat(fitdist((mw$y+1),c("exp"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("pois"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("binom"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("gamma"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("weibull"),discrete=T,method="mle"))
+gofstat(fitdist((mw$y+1),c("exp"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y+1),c("nbinom"),discrete=T,method="mle"))
 gofstat(fitdist((mw$y),c("nbinom"),discrete=T,method="mle"))
 ### applied literally to y, negative binomial is describing the number of drawn visitors necessary to draw a visitor 4 times 
 ### thats not great, but another "ecological" interpretation of negative binomial, from p 165 of http://ms.mcmaster.ca/~bolker/emdbook/book.pdf
 ###     is poissonian (What is the number of events (person joins core group) in each community in a month) where the lambda for each community is different.  That's a perfect description of my data.
 
-### negative binomial (beats glm(family=poisson()) and zinb() on AIC and logLik
-### plots clean QQ and constant variance in residuals
-summary(srvnb_ctl <- glm.nb(y ~  srv_details + date_ping_int + weeks_up_todate + srv_max_log, mw))
-#summary(srvnb_full2 <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*governance_intensity + srv_max_log*administration + srv_max_log*governance_scope2, mw))
-summary(srvnb_full <- glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
-anova(srvnb_ctl , srvnb_full )
-plotSimulatedResiduals(simulationOutput <- simulateResiduals(fittedModel = srvnb_ctl, n = 250))
-plotSimulatedResiduals(simulationOutput <- simulateResiduals(fittedModel = srvnb_full, n = 250))
-### test effectof plugin specialization, which has too many missing values to test with the other kids
-anova(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity, mw[!is.na(plugin_specialization)]), glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity+ srv_max_log*plugin_specialization , mw[!is.na(plugin_specialization)]))
-#summary(srvpoisson <- glm(y ~  srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_norm, mw, family="poisson"))
-#summary(srvzi <- zeroinfl(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_norm | 1 , data = mw, dist = "negbin", EM = TRUE))
-
-### "univariate" after controls
-summary(srvnb_full <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*governance_scope, mw))
-summary(srvnb_full <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*rule_diversity, mw))
-summary(srvnb_full <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*consolidation, mw))
-summary(srvnb_p1 <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*behavior_management, mw))
-summary(srvnb_p1 <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*governance_intensity, mw))
-summary(srvnb_full <- glm.nb(y ~ srv_details + dataset_reddit + dataset_mcs_org + date_ping_int + weeks_up_todate + srv_max_log*plugin_specialization, mw))
-
-### "all but one"s after controls
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*governance_intensity , mw))
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management , mw))
-summary(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw))
-### and plots thereof
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$governance_scope)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$rule_diversity)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$consolidation)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*governance_intensity , mw)), mw$behavior_management)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management , mw)), mw$governance_intensity)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$plugin_specialization)
-### and plots of the interactions
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$srv_max_log*mw$governance_scope)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$srv_max_log*mw$rule_diversity)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$srv_max_log*mw$consolidation)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*governance_intensity , mw)), mw$srv_max_log*mw$behavior_management)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management , mw)), mw$srv_max_log*mw$governance_intensity)
-plot(residuals(glm.nb(y ~ srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*consolidation + srv_max_log*behavior_management + srv_max_log*governance_intensity , mw)), mw$srv_max_log*mw$plugin_specialization)
+### comparable results on two random subsets (many times over)?
+ss<- sort(sample(1:nrow(mw), (nrow(mw)/2))); mw1 <- mw[ss]; mw2 <- mw[(1:nrow(mw))[1:nrow(mw) %ni% ss]]
+summary(glm.nb(y_norm ~ success_dummy0 + success_dummy1 + srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*governance_intensity + srv_max_log*plugin_specialization, mw1))
+summary(glm.nb(y_norm ~ success_dummy0 + success_dummy1 + srv_details + date_ping_int + weeks_up_todate + srv_max_log*governance_scope  + srv_max_log*rule_diversity + srv_max_log*governance_intensity + srv_max_log*plugin_specialization, mw2))
 
 
 ### now model diversity across servers changing with succes by size
-mwbin <- mw[,.(plugin_count=as.numeric(median(plugin_count)), diversity=gov_dist(.SD[,.(cat_chat, cat_informational, cat_economy, cat_admin)], 1:.N, function(d){minkowski(d[1], d[2] , p=-1)})),by=.(perf_factor, pop_size_factor)]
-mwbin <- mw[,.(plugin_count=as.numeric(median(plugin_count)), diversity=gov_dist(.SD[,.(cat_chat, cat_informational, cat_economy, cat_admin)], 1:.N, function(d){proxy::dist(d, method="simple matching")})),by=.(perf_factor, pop_size_factor)]
-mwbin <- mw[,.(plugin_count=as.numeric(median(plugin_count)), diversity=entropy_calc(colSums(.SD[,.(cat_chat, cat_informational, cat_economy)])/sum(.SD[,.(cat_chat, cat_informational, cat_economy)]))),by=.(perf_factor, pop_size_factor)]
-divlm <- lm(as.numeric(pop_size_factor) ~ plugin_count + diversity, mwbin); summary(divlm)
+mwbin <- mw[,.(bin_count=.N,plugin_count=as.numeric(median(plugin_count)), diversity=entropy_calc(colSums(.SD[,.(cat_chat, cat_informational, cat_economy, cat_admin)])/sum(.SD[,.(cat_chat, cat_informational, cat_economy, cat_admin)]))),by=.(perf_factor, pop_size_factor)]
+divlm <- lm(as.numeric(perf_factor) ~ plugin_count + diversity*as.numeric(pop_size_factor), mwbin); summary(divlm)
 #plot(divlm)
-
-### corr of inputs
-xxx <- cor(srvlm$model[,c(1,7:12)])
-print.table(local({xxx[xxx<0.3] <- NA; xxx}))
-
-###h testing
-summary(glht(srvlm, linfct = c("governance_scope = 0", 
-  "governance_intensity = 0", 
-  "plugin_specialization = 0", 
-  "rule_diversity = 0", 
-  "consolidation = 0"))
+print(summary(divlm))
 
 
+
+### resources
+summary(resnb <- glm.nb(y ~  plugin_count + srv_max_log + srv_max_log*res_grief + srv_max_log*res_realworld + srv_max_log*res_ingame, mw))
+summary(resnb <- glm.nb(y ~  plugin_count + srv_max_log + srv_max_log*pct_grief + srv_max_log*pct_realworld + srv_max_log*pct_ingame, mw))
+### inst
+summary(resnb <- glm.nb(y ~  plugin_count + srv_max_log + srv_max_log*cat_chat + srv_max_log*cat_informational + srv_max_log*cat_economy + srv_max_log*cat_admin, mw))
+summary(resnb <- glm.nb(y ~  plugin_count + srv_max_log + srv_max_log*pct_ichat + srv_max_log*pct_iinformational + srv_max_log*pct_ieconomy + srv_max_log*pct_iadmin, mw))
+
+
+
+
+#use training dataset to calculate model that selects variables for final model
+	#negative binomial (non-zero inflated) regression
+#threshold: 0.01
+#report
+#run test over bins
+#get a table of result (via tidy) and get it into the ms and put in caps what's significant in what direction and start writing!I#
 
 
 

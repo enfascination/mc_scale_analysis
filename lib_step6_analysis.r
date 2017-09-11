@@ -27,6 +27,7 @@ registerDoMC(cores = 8)
 #library(sfsmisc)
 library(rms)
 library(broom)
+library(scales) ### for rescale
 
 ### handle NAs thusly: https://stackoverflow.com/questions/17398044/how-can-i-vectorize-the-entropy-calculation
 entropy_calc <- function(x) {entropy(x, method="ML")}
@@ -87,6 +88,8 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     sfeat[,feat_count:=.N,by="feat_code"]
 	### this introduces NA's in servers that never reported any plugins (zero features/rows of feat_source=="plugin")
     sfeat[,plugin_specialization:= .SD[feat_source=="plugin", as.numeric(median(feat_count, na.rm=T))], by="srv_addr"]
+    sfeat[,plugin_specialization:=1/plugin_specialization]
+    sfeat[is.na(plugin_specialization),plugin_specialization:=0]
     sfeat[srv_max>0,srv_max_log:=log2(srv_max+1)]
     sfeat[,success:=y/srv_max]
     sfeat[,log_plugin_count:=log10(plugin_count+1)]
@@ -97,6 +100,7 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     sfeat[,dataset_omni:=ifelse(dataset_source=="omni",1,0)]
     sfeat[,dataset_mcs_org:=ifelse(dataset_source=="mcs_org",1,0)]
     sfeat[,':='(jubilees=as.integer(jubilees), srv_repquery=as.integer(srv_repquery), srv_repplug=as.integer(srv_repplug), srv_repsample=as.integer(srv_repsample), srv_repsniff=as.integer(srv_repsniff), date_ping_int=as.integer(date_ping), weeks_up_todate=as.numeric(weeks_up_todate))]
+    sfeat[,date_ping_int:=rescale(date_ping_int)]
     sfeat[!is.na(keyword_count) | !is.na(tag_count) ,norm_count:=sum(keyword_count,tag_count, na.rm=T), by=.(srv_addr)]
     
     ### merge in plugin info to help filtering specifically, banning of non-vanilla servers
@@ -224,10 +228,10 @@ splitDataTestTrain <- function(data, proportions=c(0.6, 0.4), validation_set=FAL
         tt$seed <- seed
     }
     #inTrain <- createDataPartition(y = mc_w$y, p = .6, list = FALSE)  ### can't handle NAs
-    inTrain <- sample(1:nrow(data), proportions[1]*nrow(data), replace=F)
+    inTrain <- sample(1:nrow(data), floor(proportions[1]*nrow(data)), replace=F)
     tt$train <- data[ inTrain,]
     if (validation_set) {
-        inValidation <- sample(1:nrow(data[-inTrain,]), proportions[2]*nrow(data[-inTrain,]), replace=F)
+        inValidation <- sample(1:nrow(data[-inTrain,]), floor(proportions[2]*nrow(data)), replace=F)
         tt$validate <- data[-inTrain,][inValidation]
         tt$test <- data[-inTrain,][-inValidation]
     } 

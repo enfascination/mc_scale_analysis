@@ -31,13 +31,14 @@ prepmerge:
 prepanalysis:
 	time R -f step45_merge_plugins.r
 	time R -f step5_merge_scrapes.r
+	#time R -f step525_detect_hacked_servers.r ### doesn't  actually work
 	time R -f step55_analysis_prep.R 
 
 analysis:
 	#time R -f step6_plotting.r
-	time R -f step10_results.r
-	time R -f step9_plotting_wplugins.r
 	time R -f step9_plotting_noplugins.r
+	time R -f step9_plotting_wplugins.r
+	time R -f step10_analysis.r
 
 test:
 	time R -f tests/testthat.r
