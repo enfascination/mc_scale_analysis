@@ -27,16 +27,18 @@ make_plot_size_by_success <- function(mwdata, fillvarscols, fillvarsfn, ggmore=g
     if (return_plot) {
         mwp1 <- ggplot(mwd1, aes_string(x=xvar, y=yvar))
         if (unscaledyvar) {
-            mwp1 <- mwp1 + scale_y_discrete("Core members", expand = c(0.035,0))#, labels=c("0", "", "", "10", "", "", "100"))
+            mwp1 <- mwp1 + scale_y_discrete("Success", expand = c(0.035,0))#, labels=c("0", "", "", "10", "", "", "100"))
         } else {
-            mwp1 <- mwp1 + scale_y_discrete("Core members", expand = c(0.035,0))
+            mwp1 <- mwp1 + scale_y_discrete("Success", expand = c(0.035,0))
         }
-        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_cowplot() + theme(panel.grid.major=element_line(0), axis.text.y = element_text(angle = 45), plot.title = element_text(hjust = 0.5)) + coord_fixed(ratio=6/7) + scale_x_discrete("Server size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
+        mwp1 <- mwp1 + geom_bin2d(aes(fill=pop_var)) + theme_cowplot() + theme(panel.grid.major=element_line(0), plot.title = element_text(hjust = 0.5, size=12), axis.title=element_text(size=9), axis.text = element_text(angle = 30, size=8.5), axis.text.x = element_text(hjust=0.9)) + coord_fixed(ratio=6/7) + scale_x_discrete("Size", expand = c(0.035,0) ) + guides(fill=ggguide) + ggmore
         if (ggtext != FALSE) {
 			if (ggtext=="%") {
-				mwp1 <- mwp1 + geom_text(aes(label=paste("",round(100*pop_var), '%', sep='')), color="dark grey")
+				mwp1 <- mwp1 + geom_text(aes(label=paste("",round(100*pop_var), '%', sep='')), color="dark grey", size=3)
+			} else if (ggtext=="raw") {
+				mwp1 <- mwp1 + geom_text(aes(label=pop_var), color="dark grey", size=3)
 			} else {
-				mwp1 <- mwp1 + geom_text(aes(label=round(signif(pop_var, 2),2)), color="dark grey")
+				mwp1 <- mwp1 + geom_text(aes(label=round(signif(pop_var, 2),2)), color="dark grey", size=3)
 			}
         }
         if (ggrug) {
@@ -205,7 +207,7 @@ library(jsd)
 library('proxy')
 gov_dist <- function(data, i_samp, distf=NA) {
     samp_size <- ncol(data) ### this is a bit les unproper, but 
-    samp_size <- 3  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
+    samp_size <- 2  ### this lets me keep at least one bin in the upper-right bin of the 2D histogram
     n <- 100
     if(nrow(data[i_samp]) < samp_size) {
         diversity <- numeric()
@@ -214,24 +216,24 @@ gov_dist <- function(data, i_samp, distf=NA) {
         dists <- rep(0, n)
         for (i in 1:n) {
             idxs <- sample(i_samp, 2) #i_sampl should come shuffled, but just in case ...
-            if (!is.function(distf) | is.na(distf)) {
-                distf = function(d) { proxy::dist( d , method="simple matching") }
+            if (!is.function(distf) & is.na(distf)) {
+                distf = function(d1,d2) { proxy::dist( rbind(d1,d2) , method="simple matching") }
             }
             #dists[i] <- hamming( data[ idxs[1], ] , data[ idxs[2], ] )
             #dists[i] <- dist( data[ idxs, ] , method="cosine")
             #dists[i] <- dist( apply(data[ idxs, ] + 1, 1, prop.table) , method="Kullback")
             #dists[i] <- dist( data[ idxs, ] , method="Manhattan")
-            dists[i] <- distf(data[ idxs, ])
+            dists[i] <- distf( data[ idxs[1], ] , data[ idxs[2], ] )
             #dists[i] <-  data[idxs,] %>% apply(2, diff) %>% abs() %>% sum() ## "taxicab" distance or L1
             #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% log1p() %>% sum()
             #dists[i] <- ( data[ idxs[1], ] - data[ idxs[2], ] ) %>% abs() %>% (function(x){ifelse(x==0,0,1)})() %>% sum()
         }
-        #diversity <- mean(dists) 
-        diversity <- median(dists) 
+        diversity <- mean(dists) 
+        #diversity <- median(dists) 
     }
     return(diversity )
 }
-L1 <- function(d1, d2) {( d1 - d2 ) %>% abs() %>% log1p() %>% sum() %>% return() }
+L1 <- function(d1, d2)      {(d1 - d2) %>% abs() %>% sum() %>% return() }
 hamming <- function(d1, d2) {(d1 - d2) %>% abs() %>% (function(x){ifelse(x==0,0,1)})() %>% sum() %>% return() }
 logL1 <- function(d1, d2) {( d1 - d2 ) %>% abs() %>% log1p() %>% sum() %>% return() }
 SJD <- function(d1, d2) {JSD( d1, d2 )^0.5 %>% return() }

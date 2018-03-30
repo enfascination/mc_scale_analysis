@@ -10,7 +10,7 @@ library(magrittr)
 library(ggforce)
 
 # COLLECT DATA
-counts <- rep(0,5)
+counts <- rep(0,6)
 #FIRST Total collected: 376576
 #wc -l /Users/sfrey/projecto_staid/minecraft/20161114/master_ip_list.txt
 ttl_command <- paste0("wc -l ", pathStaid, "20161114/master_ip_list.txt  | awk '{print $1}'")
@@ -18,24 +18,28 @@ counts[1] <- system(ttl_command, intern=TRUE) %>% as.numeric()
 #SECOND pingable: 147815
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
 counts[2] <- spings[,length(unique(srv_addr))]
+# THIRD unhacked
+spings <- spings[srv_addr %ni% spings[hackedapi == TRUE,unique(srv_addr)]]
+counts[3] <- spings[,length(unique(srv_addr))]
 # THIRD up at least a month 85000
-sfeat <- buildPickDependent(spings, dependent='ncomm4visits')
-counts[3] <- sfeat[,length(unique(srv_addr))]
+sfeat <- buildPickDependent(spings, dependent= 'ncomm4visits_bestweek')
+counts[4] <- sfeat[,length(unique(srv_addr))]
 #FOURTH gave plugins: 9709
 spings <- readRDS(paste0(pathData, "step5_serversweeks.rds"))
 splugins <- readRDS(paste0(pathData, "step5_serversweeksplugins.rds"))
 pluginstats <- as.data.table(read.csv(paste0(pathData, 'step45_curse_plugins_metadata_full.csv')))
-sfeat <- buildPickDependent(spings, dependent='ncomm4visits')
+sfeat <- buildPickDependent(spings, dependent= 'ncomm4visits_bestweek')
 sfeat <- buildFeatureTable(sfeat, splugins, pluginstats)
 mc <- sfeat
 n_servers <- mc[,length(unique(srv_addr))]
 featureCountMin=max(2, as.integer(n_servers/1000))
+featureCountMin=25
 mc <- filterDataSetDownDataProvision(mc, featureCountMin=featureCountMin, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
-counts[4] <- mc[,length(unique(srv_addr))]
+counts[5] <- mc[,length(unique(srv_addr))]
 #FIFTH basic functioning: 5280
 mc <- sfeat
-mc <- filterDataSetDown(mc, cutUnrealistic=TRUE, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=featureCountMin, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
-counts[5] <- mc[,length(unique(srv_addr))]
+mc <- filterDataSetDown(mc, cutNonVanilla=TRUE, cutNonPositiveDependent=FALSE, featureCountMin=featureCountMin, keepFeatTypes=c('plugin', 'property'), keepDataSource=c('reddit', 'omni', 'mcs_org'))
+counts[6] <- mc[,length(unique(srv_addr))]
 counts 
 labels <- c( "Total collected", "Pingable", "\u22651 month", "Governance info", "Basic play")
 fnl <- data.frame(cbind(count=counts, label=labels ))
