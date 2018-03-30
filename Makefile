@@ -36,9 +36,10 @@ prepanalysis:
 
 analysis:
 	#time R -f step6_plotting.r
-	time R -f step9_plotting_noplugins.r
+	#time R -f step9_plotting_noplugins.r
 	time R -f step9_plotting_wplugins.r
 	time R -f step10_analysis.r
+	time R -f plot_data_funnel.r
 
 test:
 	time R -f tests/testthat.r

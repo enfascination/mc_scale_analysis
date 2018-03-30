@@ -28,6 +28,7 @@ registerDoMC(cores = 8)
 library(rms)
 library(broom)
 library(scales) ### for rescale
+source(paste0(pathLocal,"plugin_classes.r"))
 
 ### handle NAs thusly: https://stackoverflow.com/questions/17398044/how-can-i-vectorize-the-entropy-calculation
 entropy_calc <- function(x) {entropy(x, method="ML")}
@@ -69,7 +70,7 @@ buildPickDependent <- function(spings, dependent='ncomm4visits_randomweek') {
     return(sserv)
 }
 
-buildFeatureTable <- function(sserv, splugins, pluginstats) {
+buildFeatureTable <- function(sserv, splugins, pluginstats, noCatIfNoResource=TRUE) {
     ### Enrich sfeat table with some more features
     ### implictly, an important thing happening here is that null postuid means getting rid of pings that didn't match to plugin hauls
     sfeat <- splugins[,list(post_uid, feat, feat_code, feat_type, feat_source, feat_trust, plugin_count, keyword_count, tag_count, sign_count)][sserv[!is.na(post_uid)], on=c("post_uid")]  ### CAREFUL!!!  the same IPs came from a few different data sources.  argg.
@@ -107,6 +108,10 @@ buildFeatureTable <- function(sserv, splugins, pluginstats) {
     ### maybe refresh this occasionally 
     plugin_codes_byhand <- get_plugin_codes()
     sfeat <- merge(sfeat, plugin_codes_byhand[,c(1,3:ncol(plugin_codes_byhand)),with=FALSE], by=c('feat_code'), all.x=T, all.y=F)
+    if (noCatIfNoResource) {
+        ### define & constrain for limited cats of interest
+        sfeat[is.na(res_grief) | (res_grief==0 & res_ingame==0 & res_realmoney==0 & res_performance==0),':='(cat_chat=0, cat_informational=0, cat_economy=0, cat_admintools=0, cat_webadmin=0, cat_antigrief=0, cat_devtools=0, cat_fixes=0, cat_fun=0, cat_general=0, cat_mechanics=0, cat_misc=0, cat_roleplay=0, cat_teleportation=0, cat_world=0, cat_worldgen=0)]
+    }
 
     return(sfeat)
 }

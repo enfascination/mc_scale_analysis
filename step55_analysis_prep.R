@@ -18,8 +18,8 @@ spings_clean <- spings[srv_addr %ni% spings[hackedapi == TRUE,unique(srv_addr)]]
     #max_srv_max_observed <- mc[order(-nmaxpop), unique(nmaxpop)][1] 
 
 ### PICK DEPENDENT
+maxPopulationEverObserved <- spings_clean[order(-nmaxpop), unique(nmaxpop)][1]### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
 sfeat_dep <- buildPickDependent(spings_clean, dependent= 'ncomm4visits_bestweek')
-maxPopulationEverObserved <- sfeat_dep[order(-nmaxpop), unique(nmaxpop)][1]### first value, after censoring 1000074, is 593. The max number of players that a server lists can't exceed the max that I've ever actually observed, over all servers ever.
 sfeat_dep[srv_max >=  maxPopulationEverObserved, ':='(srv_max=  maxPopulationEverObserved, srv_max_log=log2(  maxPopulationEverObserved+1))]   ### I don't like doing this, but some values of srv_max are fake or meaningless, particularly very high ones.  i oriignlaly picked 5000  subjectively basedon the distirbution of server sizes but a better way to do this will be to set the max to the most trustworthy max in the data. I must do this after buildPickDependent instead of before because more servers that are subjectively fake servers are not being caught by hackedapi, and calculating this max after the merge inciedentally catches more of those.
 
 if (0) {  ### for building blank feature table
@@ -31,7 +31,7 @@ if (0) {  ### for building blank feature table
 }
 
 
-### PREP DATA FOR WIDE LONG ANALYSIS OF SURVIVAL
+### PREP DATA FOR LONG ANALYSIS OF SURVIVAL
 ## DATA PREP
 mc <- sfeat_dep
 mc <- filterDataSetDown(mc, cutNonVanilla=FALSE, cutNonPositiveDependent=FALSE, featureCountMin=0)
@@ -39,7 +39,7 @@ mw <- mc[, lapply(.SD, unique), by=.(srv_addr), .SDcols=c("post_uid", "srv_max",
 ## standardize (not an theroetically important predictor wiht a wierd range)
 
 # ENRICH FOR PLOTTING (VARS AND THEIR VALUES ONLY FOR PLOTTING)
-mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
+mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 512", ">512"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256", ">256"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
 mw[,yrug:=(log2(ifelse(y>150, 150, y)+1)+1.0)*1.0+rnorm(nrow(.SD),sd=0.02)]
@@ -96,18 +96,18 @@ mw[,srv_entropy:={inst_dist<-.SD[,grep("^inst_[^n]", names(mw)),with=FALSE][1]; 
 #mw <- cbind(mw, interact_xsrv)
 mw[,pop_size_factor:=cut(srv_max_log, breaks=c(0,0.7,1,1.7,2,2.7,3), ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor_coarse:=cut(srv_max_log, breaks=c(0,1,2,3), labels=c("<10", "10s", "\u2265100"), ordered_result=TRUE, right=FALSE)]
-mw[,pop_size_factor_fine:=cut(srv_max_log, breaks=25, ordered_result=TRUE, right=FALSE)]
 mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,8,12), labels=c("<4", "4 to 16", "16 to 64", "64 to 256", "\u2265256"), ordered_result=TRUE, right=FALSE)]
-mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024"), ordered_result=TRUE, right=TRUE)]
-mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 1024", ">1024"), ordered_result=TRUE, right=TRUE)]
+mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 512"), ordered_result=TRUE, right=TRUE)]
+mw[,pop_size_factor:=cut(log2(srv_max+1), breaks=c(0,2,4,6,12,24), labels=c("\u22644", "4 to 16", "16 to 64", "64 to 512", ">512"), ordered_result=TRUE, right=TRUE)]
+mw[,pop_size_factor_fine:=cut(log2(srv_max+1), breaks=0:24, ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), 7, ordered_result=TRUE)]
-mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256", ">256"), ordered_result=TRUE, right=TRUE)]
+mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,12,24), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 512", ">512"), ordered_result=TRUE, right=TRUE)]
+mw[,perf_factor_fine:=cut(log2(y+1), breaks=-1:24, ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,0,1,2,4,6,8), labels=c("0","1", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 #mw[,perf_factor:=cut(log2(y+1), breaks=c(-1,1,2,4,6,8), labels=c("\u22641", "1 to 4", "4 to 16", "16 to 64", "64 to 256"), ordered_result=TRUE, right=TRUE)]
 mw[,perf_factor_ratio:=cut(log2(y+1)/srv_max_log, 6, ordered_result=TRUE)]
-### these two are for the marginal density plots
-mw[,yrug:=(log2(ifelse(y>100, 100, y)+1)+1.0)*0.7+rnorm(nrow(.SD),sd=0.02)]
-mw[,xrug:=(log2(srv_max+1)+1.0)*0.4+rnorm(nrow(.SD),sd=0.02)]
+mw <- mw[,bin_count:=.N,by=.(perf_factor, pop_size_factor)]
+mw <- mw[,bin_count_fine:=.N,by=.(perf_factor_fine, pop_size_factor_fine)]
 ### resource types
 indc8 <- function(x)ifelse((x>0),1,0)  ### indicator function
 mw[,':='(total_res=sum(res_grief, res_ingame, res_realworld), count_res_type=indc8(res_grief)+ indc8(res_ingame)+ indc8(res_realworld), total_inst=(cat_chat+cat_informational+cat_economy+cat_admintools+cat_webadmin), count_inst_type=indc8(cat_chat)+indc8(cat_informational)+indc8(cat_economy)+indc8(cat_admintools+cat_webadmin), total_aud=sum(aud_users,aud_admin)),by=.(srv_addr)]
@@ -120,6 +120,11 @@ mw[total_inst==0,':='(pct_ichat=0, pct_iinformational=0, pct_ieconomy=0, pct_iad
 mw[,':='(sanity_pct=sum(pct_grief, pct_ingame, pct_realworld), entropy_res=as.numeric(entropy_calc(c(pct_grief, pct_ingame, pct_realworld))), entropy_inst=as.numeric(entropy_calc(c(pct_ichat, pct_iinformational, pct_ieconomy, pct_iadmin)))),by=.(srv_addr)]
 mw[,cat_admin:=sum(cat_admintools + cat_webadmin),by=.(srv_addr)]
 mw[,behavior_management:=sum(cat_antigrief),by=.(srv_addr)]
+### define important cat types only within acknowledge gov.  
+###   this filter is created inside buildFeatureTable , at the end
+expect_true(mw[,all(!(res_grief==0 & res_ingame==0 & res_realworld==0) | (cat_chat==0 & cat_informational==0 & cat_economy==0 & cat_admin==0 ))])
+###   still, this test doesn't imply that total_res == total_inst because plugins can have mulitple categories
+#expect_true(mw[,all((total_res) != (cat_chat + cat_informational + cat_economy + cat_admin ))])
 setnames(mw, c("total_res", "ratio_aud", "count_res_type", "count_inst_type"), c( "governance_intensity", "consolidation", "governance_scope", "rule_diversity"))
 
 #mw <- mw[y>0]
@@ -130,6 +135,7 @@ mw[,y_norm:=as.numeric(Gaussianize(y,type="h"))]
 #test_normality(mw[,y_norm])
 #mw[,srv_max_norm:=as.numeric(Gaussianize(srv_max,type="h"))]
 mw[,srv_max_norm:=as.numeric(Gaussianize(mw$srv_max+rnorm(sd=2,nrow(mw)),type="hh"))]
+mw[,srv_max_log_norm:=as.numeric(Gaussianize(mw$srv_max_log+rnorm(sd=2,nrow(mw)),type="hh"))]
 #test_normality(mw[,srv_max_norm])
 #mw[is.na(plugin_specialization),plugin_specialization:=9] ### via AMelia, which just imputed all na's to 9. 
 #mw[is.na(plugin_specialization),plugin_specialization:=NA] ### just compare to the missing values by anova.  don't impute.
